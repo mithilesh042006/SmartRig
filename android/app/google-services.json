@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "468877495126",
+    "project_id": "easybuild-3275c",
+    "storage_bucket": "easybuild-3275c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:468877495126:android:f3f73f2c5d055ba6a7e4f7",
+        "android_client_info": {
+          "package_name": "com.example.pc_buildere"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "468877495126-si3fgr6t06a4u5omr0modfdu592fr7ng.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pc_buildere",
+            "certificate_hash": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+          }
+        },
+        {
+          "client_id": "468877495126-o0grmmlqo5p3e1d7bdb27tt02hksqk2u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2TFJaH_Iw79BEoqQBRem2Z3jhsYBtvPg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "468877495126-o0grmmlqo5p3e1d7bdb27tt02hksqk2u.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "468877495126-pjfrtfhfaqignq966dedl97cpk325u02.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.pcBuildere"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
