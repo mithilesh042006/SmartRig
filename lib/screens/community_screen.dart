@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/saved_builds_service.dart';
 import '../models/component.dart';
+import '../models/component_type_ui.dart';
 
 class CommunityScreen extends ConsumerWidget {
   const CommunityScreen({super.key});
@@ -268,27 +269,6 @@ class _ComponentChip extends StatelessWidget {
 
   const _ComponentChip({required this.type, required this.component});
 
-  String get _typeLabel {
-    switch (type) {
-      case ComponentType.cpu:
-        return 'CPU';
-      case ComponentType.gpu:
-        return 'GPU';
-      case ComponentType.ram:
-        return 'RAM';
-      case ComponentType.motherboard:
-        return 'MB';
-      case ComponentType.storage:
-        return 'SSD';
-      case ComponentType.psu:
-        return 'PSU';
-      case ComponentType.pcCase:
-        return 'Case';
-      case ComponentType.cooling:
-        return 'Cool';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -302,7 +282,7 @@ class _ComponentChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            _typeLabel,
+            type.shortLabel,
             style: const TextStyle(
               color: Colors.blueAccent,
               fontSize: 11,
@@ -572,7 +552,9 @@ class _BuildDetailsSheetState extends ConsumerState<_BuildDetailsSheet> {
                       Expanded(
                         child: TextField(
                           controller: _commentController,
+                          maxLength: 1000,
                           decoration: InputDecoration(
+                            counterText: '',
                             hintText: 'Write a comment...',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(24),
@@ -652,27 +634,6 @@ class _HorizontalComponentCard extends StatelessWidget {
 
   const _HorizontalComponentCard({required this.type, required this.component});
 
-  String get _typeLabel {
-    switch (type) {
-      case ComponentType.cpu:
-        return 'CPU';
-      case ComponentType.gpu:
-        return 'GPU';
-      case ComponentType.ram:
-        return 'RAM';
-      case ComponentType.motherboard:
-        return 'Motherboard';
-      case ComponentType.storage:
-        return 'Storage';
-      case ComponentType.psu:
-        return 'PSU';
-      case ComponentType.pcCase:
-        return 'Case';
-      case ComponentType.cooling:
-        return 'Cooling';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -687,7 +648,7 @@ class _HorizontalComponentCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _typeLabel,
+            type.label,
             style: const TextStyle(
               color: Colors.blueAccent,
               fontSize: 11,

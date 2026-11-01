@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyC2TFJaH_Iw79BEoqQBRem2Z3jhsYBtvPg',
-    appId: '1:468877495126:android:f3f73f2c5d055ba6a7e4f7',
+    appId: '1:468877495126:android:91389c0274ad8178a7e4f7',
     messagingSenderId: '468877495126',
     projectId: 'easybuild-3275c',
     storageBucket: 'easybuild-3275c.firebasestorage.app',
@@ -60,20 +60,20 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyD5ppu9IxWfuQ2D4nZNR-x3e0qjgDfegPI',
-    appId: '1:468877495126:ios:550f28fddb21fdbaa7e4f7',
+    appId: '1:468877495126:ios:f6d907ba5248b40ca7e4f7',
     messagingSenderId: '468877495126',
     projectId: 'easybuild-3275c',
     storageBucket: 'easybuild-3275c.firebasestorage.app',
-    iosBundleId: 'com.example.pcBuildere',
+    iosBundleId: 'com.app.smartrig',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyD5ppu9IxWfuQ2D4nZNR-x3e0qjgDfegPI',
-    appId: '1:468877495126:ios:550f28fddb21fdbaa7e4f7',
+    appId: '1:468877495126:ios:f6d907ba5248b40ca7e4f7',
     messagingSenderId: '468877495126',
     projectId: 'easybuild-3275c',
     storageBucket: 'easybuild-3275c.firebasestorage.app',
-    iosBundleId: 'com.example.pcBuildere',
+    iosBundleId: 'com.app.smartrig',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

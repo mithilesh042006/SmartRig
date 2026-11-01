@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import '../models/component.dart';
+import '../models/component_type_ui.dart';
 import '../providers/build_provider.dart';
+import '../services/compatibility_service.dart';
 import '../services/performance_service.dart';
 import '../services/saved_builds_service.dart';
+import '../widgets/compatibility_card.dart';
 
 // Performance service provider
 final performanceServiceProvider = Provider((ref) => PerformanceService());
@@ -61,6 +64,8 @@ class ReviewBuildScreen extends ConsumerWidget {
             // Overall System Score
             _buildSystemScoreCard(result),
             const SizedBox(height: 16),
+
+            CompatibilityCard(report: ref.watch(compatibilityProvider)),
 
             // CPU & GPU Cards
             Row(
@@ -145,6 +150,9 @@ class ReviewBuildScreen extends ConsumerWidget {
   void _showSaveDialog(BuildContext context, WidgetRef ref, BuildState state) {
     final controller = TextEditingController();
     bool isPublic = false;
+    final problems = ref
+        .read(compatibilityProvider)
+        .count(CompatibilityStatus.incompatible);
 
     showDialog(
       context: context,
@@ -154,6 +162,15 @@ class ReviewBuildScreen extends ConsumerWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (problems > 0) ...[
+                Text(
+                  problems == 1
+                      ? 'This build has a compatibility problem. You can still save it.'
+                      : 'This build has $problems compatibility problems. You can still save it.',
+                  style: const TextStyle(color: Colors.red),
+                ),
+                const SizedBox(height: 16),
+              ],
               TextField(
                 controller: controller,
                 autofocus: true,
@@ -382,7 +399,7 @@ class ReviewBuildScreen extends ConsumerWidget {
               child: BarChart(
                 BarChartData(
                   alignment: BarChartAlignment.spaceAround,
-                  maxY: 200,
+                  maxY: _chartMaxY(result),
                   barTouchData: BarTouchData(enabled: false),
                   titlesData: FlTitlesData(
                     show: true,
@@ -469,6 +486,14 @@ class ReviewBuildScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Highest FPS rounded up to the next 50, so no bar is clipped.
+  double _chartMaxY(PerformanceResult result) {
+    final highest = result.gameFps.values
+        .expand((fps) => [fps.fps1080p, fps.fps1440p, fps.fps4k])
+        .fold(0, (max, fps) => fps > max ? fps : max);
+    return ((highest / 50).floor() + 1) * 50.0;
   }
 
   Widget _buildLegendItem(String label, Color color) {
@@ -584,7 +609,7 @@ class ReviewBuildScreen extends ConsumerWidget {
         children: components.map((entry) {
           final component = entry.value!;
           return ListTile(
-            leading: Icon(_getComponentIcon(entry.key)),
+            leading: Icon(entry.key.icon),
             title: Text(
               component.name,
               maxLines: 1,
@@ -602,19 +627,6 @@ class ReviewBuildScreen extends ConsumerWidget {
         }).toList(),
       ),
     );
-  }
-
-  IconData _getComponentIcon(ComponentType type) {
-    return switch (type) {
-      ComponentType.cpu => Icons.memory,
-      ComponentType.gpu => Icons.tv,
-      ComponentType.ram => Icons.storage,
-      ComponentType.motherboard => Icons.developer_board,
-      ComponentType.storage => Icons.sd_storage,
-      ComponentType.psu => Icons.power,
-      ComponentType.pcCase => Icons.computer,
-      ComponentType.cooling => Icons.ac_unit,
-    };
   }
 
   String _getScoreLabel(double score) {

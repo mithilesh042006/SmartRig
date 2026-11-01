@@ -7,18 +7,18 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:468877495126:android:f3f73f2c5d055ba6a7e4f7",
+        "mobilesdk_app_id": "1:468877495126:android:91389c0274ad8178a7e4f7",
         "android_client_info": {
-          "package_name": "com.example.pc_buildere"
+          "package_name": "com.app.smartrig"
         }
       },
       "oauth_client": [
         {
-          "client_id": "468877495126-si3fgr6t06a4u5omr0modfdu592fr7ng.apps.googleusercontent.com",
+          "client_id": "468877495126-56th0hp7s1tdpc677a7asikc9los1f7c.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.pc_buildere",
-            "certificate_hash": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+            "package_name": "com.app.smartrig",
+            "certificate_hash": "f43a95c3a1c1243f2b272e8f9105669bb2e91ab4"
           }
         },
         {
@@ -39,10 +39,54 @@
               "client_type": 3
             },
             {
-              "client_id": "468877495126-pjfrtfhfaqignq966dedl97cpk325u02.apps.googleusercontent.com",
+              "client_id": "468877495126-ikmthn71mnfkjvssnp00nu3qc4a2lb89.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.pcBuildere"
+                "bundle_id": "com.app.smartrig"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:468877495126:android:f3f73f2c5d055ba6a7e4f7",
+        "android_client_info": {
+          "package_name": "com.example.pc_buildere"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "468877495126-4cn462qnldp9osngae73v8n37tso30oe.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pc_buildere",
+            "certificate_hash": "f43a95c3a1c1243f2b272e8f9105669bb2e91ab4"
+          }
+        },
+        {
+          "client_id": "468877495126-o0grmmlqo5p3e1d7bdb27tt02hksqk2u.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2TFJaH_Iw79BEoqQBRem2Z3jhsYBtvPg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "468877495126-o0grmmlqo5p3e1d7bdb27tt02hksqk2u.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "468877495126-ikmthn71mnfkjvssnp00nu3qc4a2lb89.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.app.smartrig"
               }
             }
           ]

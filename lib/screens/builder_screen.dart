@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/component.dart';
 import '../providers/build_provider.dart';
+import '../services/compatibility_service.dart';
+import '../widgets/compatibility_card.dart';
 import 'component_selection_screen.dart';
 import 'review_build_screen.dart';
 import 'product_detail_screen.dart';
@@ -13,6 +15,7 @@ class BuilderScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final buildState = ref.watch(buildProvider);
+    final compatibility = ref.watch(compatibilityProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -33,6 +36,7 @@ class BuilderScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
+                CompatibilityCard(report: compatibility),
                 _buildSlot(
                   context,
                   ref,
@@ -107,7 +111,7 @@ class BuilderScreen extends ConsumerWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         leading: CircleAvatar(
-          backgroundColor: Colors.blueAccent.withOpacity(0.1),
+          backgroundColor: Colors.blueAccent.withValues(alpha: 0.1),
           child: Icon(icon, color: Colors.blueAccent),
         ),
         title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),

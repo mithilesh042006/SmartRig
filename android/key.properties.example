@@ -1,0 +1,9 @@
+# Copy to android/key.properties (gitignored) and fill in your release key.
+# Create the keystore once with:
+#   keytool -genkey -v -keystore %USERPROFILE%\smartrig-upload.jks -storetype JKS \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+# Back up the .jks file and these passwords; losing them blocks app updates.
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=upload
+storeFile=C:\\Users\\YOU\\smartrig-upload.jks

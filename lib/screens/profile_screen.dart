@@ -218,33 +218,6 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _sendPasswordReset(
-    BuildContext context,
-    WidgetRef ref,
-    String? email,
-  ) async {
-    if (email == null) return;
-
-    try {
-      final authService = ref.read(authServiceProvider);
-      await authService.sendPasswordResetEmail(email);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password reset email sent!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -306,7 +279,7 @@ class ProfileScreen extends ConsumerWidget {
         ),
         value: value,
         onChanged: onChanged,
-        activeColor: Colors.blueAccent,
+        activeThumbColor: Colors.blueAccent,
       ),
     );
   }

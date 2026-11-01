@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import '../models/component.dart';
 
@@ -32,11 +34,18 @@ class ProductDetails {
   });
 }
 
+/// Fetches Amazon products through the Cloudflare Worker in `worker/`, which
+/// holds the RapidAPI key and only accepts signed-in Firebase users.
 class AmazonApiService {
-  static const String _baseUrl = 'real-time-amazon-data.p.rapidapi.com';
-  static const String _apiKey =
-      '310a2adbf0msh08eba5ec09aee90p10ef54jsnaf7e9db0f974';
-  static const String _apiHost = 'real-time-amazon-data.p.rapidapi.com';
+  static const _baseUrl = 'https://smartrig-proxy.smartrig-proxy.workers.dev';
+  static const _timeout = Duration(seconds: 20);
+
+  final http.Client _client;
+  final FirebaseAuth _auth;
+
+  AmazonApiService({http.Client? client, FirebaseAuth? auth})
+    : _client = client ?? http.Client(),
+      _auth = auth ?? FirebaseAuth.instance;
 
   Future<List<Component>> searchProducts({
     required String query,
@@ -47,61 +56,28 @@ class AmazonApiService {
     final componentKeywords = getDefaultQuery(componentType);
     final enforcedQuery = _buildEnforcedQuery(query, componentKeywords);
 
-    final uri = Uri.https(_baseUrl, '/search', {
+    final data = await _call('/search', {
       'query': enforcedQuery,
       'country': country,
-      'page': '1',
     });
+    final products = data['products'] as List? ?? [];
 
-    try {
-      final response = await http
-          .get(
-            uri,
-            headers: {'x-rapidapi-key': _apiKey, 'x-rapidapi-host': _apiHost},
-          )
-          .timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final products = data['data']?['products'] as List? ?? [];
-
-        return products.take(10).map((product) {
-          final priceStr = product['product_price'] as String? ?? '\$0';
-          final priceValue =
-              double.tryParse(priceStr.replaceAll(RegExp(r'[^\d.]'), '')) ??
-              0.0;
-
-          return Component(
-            id: product['asin'] ?? '',
-            name: product['product_title'] ?? 'Unknown Product',
-            brand: _extractBrand(product['product_title'] ?? ''),
-            type: componentType,
-            price: priceValue,
-            imageUrl: product['product_photo'],
-            specs: {
-              'Rating': product['product_star_rating'] ?? 'N/A',
-              'Reviews': product['product_num_ratings']?.toString() ?? '0',
-              'ProductUrl': product['product_url'] ?? '',
-            },
-          );
-        }).toList();
-      } else if (response.statusCode == 403) {
-        throw Exception(
-          'API key invalid or expired. Please check your RapidAPI subscription.',
-        );
-      } else if (response.statusCode == 429) {
-        throw Exception('API rate limit exceeded. Please try again later.');
-      } else {
-        throw Exception('Failed to load products: ${response.statusCode}');
-      }
-    } catch (e) {
-      if (e.toString().contains('TimeoutException')) {
-        throw Exception(
-          'Request timed out. Please check your internet connection.',
-        );
-      }
-      rethrow;
-    }
+    return products.map((raw) {
+      final product = _asMap(raw);
+      return Component(
+        id: product['asin'] ?? '',
+        name: product['product_title'] ?? 'Unknown Product',
+        brand: _extractBrand(product['product_title'] ?? ''),
+        type: componentType,
+        price: _parsePrice(product['product_price']),
+        imageUrl: product['product_photo'],
+        specs: {
+          'Rating': product['product_star_rating'] ?? 'N/A',
+          'Reviews': product['product_num_ratings']?.toString() ?? '0',
+          'ProductUrl': product['product_url'] ?? '',
+        },
+      );
+    }).toList();
   }
 
   /// Fetch detailed product information by ASIN
@@ -109,52 +85,99 @@ class AmazonApiService {
     required String asin,
     String country = 'US',
   }) async {
-    final uri = Uri.https(_baseUrl, '/product-details', {
+    final product = await _call('/product-details', {
       'asin': asin,
       'country': country,
     });
 
-    final response = await http.get(
-      uri,
-      headers: {'x-rapidapi-key': _apiKey, 'x-rapidapi-host': _apiHost},
+    // Extract features
+    final aboutProduct = product['about_product'] as List? ?? [];
+    final features = aboutProduct
+        .map((f) => {'feature': f.toString()})
+        .toList()
+        .cast<Map<String, String>>();
+
+    // Extract images
+    final productPhotos = product['product_photos'] as List? ?? [];
+    final images = productPhotos.map((p) => p.toString()).toList();
+
+    return ProductDetails(
+      asin: asin,
+      title: product['product_title'] ?? 'Unknown Product',
+      description: product['product_description'],
+      imageUrl: product['product_photo'],
+      images: images,
+      price: _parsePrice(product['product_price']),
+      priceDisplay: product['product_price'],
+      rating: product['product_star_rating'],
+      reviewCount: product['product_num_ratings']?.toString(),
+      productUrl: product['product_url'],
+      brand: product['product_byline'],
+      features: features,
     );
+  }
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      final product = data['data'] ?? {};
+  Future<Map<String, dynamic>> _call(
+    String path,
+    Map<String, dynamic> params,
+  ) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('Please sign in to search products.');
 
-      final priceStr = product['product_price'] as String? ?? '\$0';
-      final priceValue =
-          double.tryParse(priceStr.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
-
-      // Extract features
-      final aboutProduct = product['about_product'] as List? ?? [];
-      final features = aboutProduct
-          .map((f) => {'feature': f.toString()})
-          .toList()
-          .cast<Map<String, String>>();
-
-      // Extract images
-      final productPhotos = product['product_photos'] as List? ?? [];
-      final images = productPhotos.map((p) => p.toString()).toList();
-
-      return ProductDetails(
-        asin: asin,
-        title: product['product_title'] ?? 'Unknown Product',
-        description: product['product_description'],
-        imageUrl: product['product_photo'],
-        images: images,
-        price: priceValue,
-        priceDisplay: product['product_price'],
-        rating: product['product_star_rating'],
-        reviewCount: product['product_num_ratings']?.toString(),
-        productUrl: product['product_url'],
-        brand: product['product_byline'],
-        features: features,
+    final http.Response response;
+    try {
+      final token = await user.getIdToken();
+      response = await _client
+          .post(
+            Uri.parse('$_baseUrl$path'),
+            headers: {
+              'authorization': 'Bearer $token',
+              'content-type': 'application/json',
+            },
+            body: jsonEncode(params),
+          )
+          .timeout(_timeout);
+    } on TimeoutException {
+      throw Exception(
+        'Request timed out. Please check your internet connection.',
       );
-    } else {
-      throw Exception('Failed to load product details: ${response.statusCode}');
+    } on Exception {
+      throw Exception(
+        'Could not reach the product service. Please check your internet connection.',
+      );
     }
+
+    final body = _decode(response.body);
+    if (response.statusCode == 200) return body;
+
+    final error = _asMap(body['error']);
+    final message = error['message'] as String?;
+    throw Exception(switch (error['code']) {
+      'unauthenticated' => 'Please sign in to search products.',
+      'deadline-exceeded' =>
+        'Request timed out. Please check your internet connection.',
+      'resource-exhausted' ||
+      'not-found' ||
+      'unavailable' => message ?? 'Product service is unavailable.',
+      _ => 'Could not load products. Please try again later.',
+    });
+  }
+
+  // Gateway errors can return HTML instead of JSON
+  static Map<String, dynamic> _decode(String body) {
+    try {
+      return _asMap(jsonDecode(body));
+    } on FormatException {
+      return <String, dynamic>{};
+    }
+  }
+
+  static Map<String, dynamic> _asMap(Object? value) =>
+      value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
+
+  static double _parsePrice(Object? price) {
+    final priceStr = price is String ? price : '\$0';
+    return double.tryParse(priceStr.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
   }
 
   /// Build enforced query by appending component keywords to user's search

@@ -58,7 +58,6 @@ class AppTheme {
         primary: const Color(0xFF6200EE),
         secondary: const Color(0xFF03DAC6),
         surface: const Color(0xFFF5F5F5),
-        background: const Color(0xFFFFFFFF),
       ),
       scaffoldBackgroundColor: const Color(0xFFFFFFFF),
       appBarTheme: const AppBarTheme(
@@ -91,7 +90,6 @@ class AppTheme {
         primary: const Color(0xFFBB86FC),
         secondary: const Color(0xFF03DAC6),
         surface: const Color(0xFF1E1E1E),
-        background: const Color(0xFF121212),
       ),
       scaffoldBackgroundColor: const Color(0xFF121212),
       appBarTheme: const AppBarTheme(

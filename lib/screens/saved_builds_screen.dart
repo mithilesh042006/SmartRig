@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/component.dart';
+import '../models/component_type_ui.dart';
 import '../services/saved_builds_service.dart';
 import '../providers/build_provider.dart';
 import 'builder_screen.dart';
@@ -120,10 +120,10 @@ class SavedBuildsScreen extends ConsumerWidget {
                 children: build.components.entries.take(4).map((entry) {
                   return Chip(
                     label: Text(
-                      _getTypeShortName(entry.key),
+                      entry.key.shortLabel,
                       style: const TextStyle(fontSize: 12),
                     ),
-                    avatar: Icon(_getComponentIcon(entry.key), size: 16),
+                    avatar: Icon(entry.key.icon, size: 16),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     visualDensity: VisualDensity.compact,
                   );
@@ -197,7 +197,7 @@ class SavedBuildsScreen extends ConsumerWidget {
 
     if (confirmed == true) {
       final service = ref.read(savedBuildsServiceProvider);
-      await service.deleteBuild(build.id);
+      await service.deleteBuild(build.id, isPublic: build.isPublic);
       // Stream auto-updates, no invalidation needed
 
       if (context.mounted) {
@@ -210,31 +210,5 @@ class SavedBuildsScreen extends ConsumerWidget {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
-  }
-
-  String _getTypeShortName(ComponentType type) {
-    return switch (type) {
-      ComponentType.cpu => 'CPU',
-      ComponentType.gpu => 'GPU',
-      ComponentType.ram => 'RAM',
-      ComponentType.motherboard => 'MB',
-      ComponentType.storage => 'SSD',
-      ComponentType.psu => 'PSU',
-      ComponentType.pcCase => 'Case',
-      ComponentType.cooling => 'Cool',
-    };
-  }
-
-  IconData _getComponentIcon(ComponentType type) {
-    return switch (type) {
-      ComponentType.cpu => Icons.memory,
-      ComponentType.gpu => Icons.tv,
-      ComponentType.ram => Icons.storage,
-      ComponentType.motherboard => Icons.developer_board,
-      ComponentType.storage => Icons.sd_storage,
-      ComponentType.psu => Icons.power,
-      ComponentType.pcCase => Icons.computer,
-      ComponentType.cooling => Icons.ac_unit,
-    };
   }
 }

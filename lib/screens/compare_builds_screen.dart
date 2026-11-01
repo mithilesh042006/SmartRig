@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/component.dart';
+import '../models/component_type_ui.dart';
 import '../providers/build_provider.dart';
 import '../services/saved_builds_service.dart';
 import '../services/performance_service.dart';
@@ -276,7 +276,7 @@ class _CompareBuildsScreenState extends ConsumerState<CompareBuildsScreen> {
                 child: Row(
                   children: [
                     Icon(
-                      _getComponentIcon(e.key),
+                      e.key.icon,
                       size: 16,
                       color: Colors.grey,
                     ),
@@ -328,18 +328,5 @@ class _CompareBuildsScreenState extends ConsumerState<CompareBuildsScreen> {
       ),
       child: Text(label, style: TextStyle(color: color, fontSize: 12)),
     );
-  }
-
-  IconData _getComponentIcon(ComponentType type) {
-    return switch (type) {
-      ComponentType.cpu => Icons.memory,
-      ComponentType.gpu => Icons.tv,
-      ComponentType.ram => Icons.storage,
-      ComponentType.motherboard => Icons.developer_board,
-      ComponentType.storage => Icons.sd_storage,
-      ComponentType.psu => Icons.power,
-      ComponentType.pcCase => Icons.computer,
-      ComponentType.cooling => Icons.ac_unit,
-    };
   }
 }

@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/component.dart';
 
@@ -77,7 +80,7 @@ class SavedBuild {
       'id': id,
       'name': name,
       'components': components.map(
-        (key, value) => MapEntry(key.index.toString(), _componentToJson(value)),
+        (key, value) => MapEntry(key.name, _componentToJson(value)),
       ),
       'totalPrice': totalPrice,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -95,11 +98,9 @@ class SavedBuild {
     final componentsJson = data['components'] as Map<String, dynamic>? ?? {};
 
     componentsJson.forEach((key, value) {
-      final typeIndex = int.tryParse(key);
-      if (typeIndex != null && typeIndex < ComponentType.values.length) {
-        componentsMap[ComponentType.values[typeIndex]] = _componentFromJson(
-          value,
-        );
+      final type = _typeFromKey(key);
+      if (type != null) {
+        componentsMap[type] = _componentFromJson(value, type);
       }
     });
 
@@ -126,19 +127,31 @@ class SavedBuild {
       'id': c.id,
       'name': c.name,
       'brand': c.brand,
-      'type': c.type.index,
+      'type': c.type.name,
       'price': c.price,
       'imageUrl': c.imageUrl,
       'specs': c.specs,
     };
   }
 
-  static Component _componentFromJson(Map<String, dynamic> json) {
+  /// Accepts stable names ("cpu") and the enum indexes ("0") of older builds.
+  static ComponentType? _typeFromKey(String key) {
+    final index = int.tryParse(key);
+    if (index == null) return ComponentType.values.asNameMap()[key];
+    return index >= 0 && index < ComponentType.values.length
+        ? ComponentType.values[index]
+        : null;
+  }
+
+  static Component _componentFromJson(
+    Map<String, dynamic> json,
+    ComponentType type,
+  ) {
     return Component(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
       brand: json['brand'] ?? '',
-      type: ComponentType.values[json['type'] ?? 0],
+      type: type,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       imageUrl: json['imageUrl'],
       specs: Map<String, dynamic>.from(json['specs'] ?? {}),
@@ -148,8 +161,15 @@ class SavedBuild {
 
 /// Service for persisting saved builds to Firestore
 class SavedBuildsService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+
+  SavedBuildsService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
+
+  // Firestore allows at most 500 writes per batch.
+  static const _maxBatchWrites = 500;
 
   /// Get the current user's builds collection reference
   CollectionReference? _getUserBuildsCollection() {
@@ -211,12 +231,70 @@ class SavedBuildsService {
       throw Exception('User not authenticated');
     }
 
-    // Delete from user's private collection
-    await collection.doc(id).delete();
+    if (!isPublic) {
+      await collection.doc(id).delete();
+      return;
+    }
 
-    // If it was public, also delete from public collection
-    if (isPublic) {
-      await _publicBuildsCollection.doc(id).delete();
+    // Firestore doesn't delete subcollections, so remove the public copy's
+    // comments first. The rules let the build owner delete them only while
+    // the build still exists, so the build itself goes in the last batch.
+    final publicRef = _publicBuildsCollection.doc(id);
+    final comments = (await publicRef.collection('comments').get()).docs;
+    final writes = <DocumentReference>[
+      ...comments.map((c) => c.reference),
+      publicRef,
+      collection.doc(id),
+    ];
+
+    for (var i = 0; i < writes.length; i += _maxBatchWrites) {
+      final batch = _firestore.batch();
+      for (final ref in writes.skip(i).take(_maxBatchWrites)) {
+        batch.delete(ref);
+      }
+      await batch.commit();
+    }
+  }
+
+  /// Rewrites the current user's builds that still use enum-index component
+  /// keys. Other users' public builds are migrated when their owner signs in;
+  /// until then [SavedBuild.fromFirestore] reads both formats.
+  Future<void> migrateLegacyComponentKeys() async {
+    final collection = _getUserBuildsCollection();
+    if (collection == null) return;
+
+    final writes = <(DocumentReference, Map<String, dynamic>)>[];
+    for (final doc in (await collection.get()).docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final components = data['components'] as Map<String, dynamic>? ?? {};
+      final legacyKeys = components.keys.where(
+        (key) => int.tryParse(key) != null,
+      );
+      if (legacyKeys.isEmpty) continue;
+
+      // Field paths, so only these keys change and old ones are really removed.
+      final migrated =
+          SavedBuild.fromFirestore(doc).toJson()['components']
+              as Map<String, dynamic>;
+      final update = <String, dynamic>{
+        for (final key in legacyKeys) 'components.$key': FieldValue.delete(),
+        for (final entry in migrated.entries)
+          'components.${entry.key}': entry.value,
+      };
+      writes.add((doc.reference, update));
+
+      final publicRef = _publicBuildsCollection.doc(doc.id);
+      if (data['isPublic'] == true && (await publicRef.get()).exists) {
+        writes.add((publicRef, update));
+      }
+    }
+
+    for (var i = 0; i < writes.length; i += _maxBatchWrites) {
+      final batch = _firestore.batch();
+      for (final (ref, update) in writes.skip(i).take(_maxBatchWrites)) {
+        batch.update(ref, update);
+      }
+      await batch.commit();
     }
   }
 
@@ -226,23 +304,23 @@ class SavedBuildsService {
     if (userId == null) throw Exception('User not authenticated');
 
     final docRef = _publicBuildsCollection.doc(buildId);
-    final doc = await docRef.get();
 
+    final doc = await docRef.get();
     if (!doc.exists) throw Exception('Build not found');
 
     final data = doc.data() as Map<String, dynamic>;
-    final likedBy = List<String>.from(data['likedBy'] ?? []);
-    final isLiked = likedBy.contains(userId);
+    final isLiked = List<String>.from(data['likedBy'] ?? []).contains(userId);
 
-    if (isLiked) {
-      // Unlike
-      likedBy.remove(userId);
-    } else {
-      // Like
-      likedBy.add(userId);
-    }
-
-    await docRef.update({'likedBy': likedBy, 'likesCount': likedBy.length});
+    // Server-side transforms apply on top of the current document, so
+    // concurrent likes from other users are never overwritten and need no
+    // transaction retries. A stale double-like/unlike from this user would
+    // break likesCount == likedBy.size(), so the rules reject it instead.
+    await docRef.update({
+      'likedBy': isLiked
+          ? FieldValue.arrayRemove([userId])
+          : FieldValue.arrayUnion([userId]),
+      'likesCount': FieldValue.increment(isLiked ? -1 : 1),
+    });
 
     return !isLiked; // Return new like state
   }
@@ -321,6 +399,12 @@ final savedBuildsServiceProvider = Provider((ref) => SavedBuildsService());
 /// Stream provider for saved builds (auto-updates)
 final savedBuildsStreamProvider = StreamProvider<List<SavedBuild>>((ref) {
   final service = ref.watch(savedBuildsServiceProvider);
+  // Safe to retry on the next launch, and old builds stay readable until then.
+  unawaited(
+    service.migrateLegacyComponentKeys().catchError(
+      (Object e) => debugPrint('Build key migration failed: $e'),
+    ),
+  );
   return service.loadBuildsStream();
 });
 

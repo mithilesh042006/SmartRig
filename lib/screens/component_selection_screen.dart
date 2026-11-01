@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/component.dart';
+import '../models/component_type_ui.dart';
 import '../providers/build_provider.dart';
 import 'product_detail_screen.dart';
 
@@ -143,7 +144,7 @@ class _ComponentSelectionScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Select ${_getTypeLabel(widget.componentType)}'),
+        title: Text('Select ${widget.componentType.label}'),
       ),
       body: Column(
         children: [
@@ -373,7 +374,7 @@ class _ComponentSelectionScreenState
                         width: 80,
                         height: 80,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
+                        errorBuilder: (_, _, _) => Container(
                           width: 80,
                           height: 80,
                           color: Colors.grey[800],
@@ -485,26 +486,5 @@ class _ComponentSelectionScreenState
         ),
       ),
     );
-  }
-
-  String _getTypeLabel(ComponentType type) {
-    switch (type) {
-      case ComponentType.cpu:
-        return 'CPU';
-      case ComponentType.gpu:
-        return 'GPU';
-      case ComponentType.ram:
-        return 'RAM';
-      case ComponentType.motherboard:
-        return 'Motherboard';
-      case ComponentType.storage:
-        return 'Storage';
-      case ComponentType.psu:
-        return 'Power Supply';
-      case ComponentType.pcCase:
-        return 'Case';
-      case ComponentType.cooling:
-        return 'Cooling';
-    }
   }
 }

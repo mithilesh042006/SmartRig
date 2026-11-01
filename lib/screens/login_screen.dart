@@ -259,7 +259,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       'https://www.google.com/favicon.ico',
                       height: 24,
                       width: 24,
-                      errorBuilder: (_, __, ___) =>
+                      errorBuilder: (_, _, _) =>
                           const Icon(Icons.g_mobiledata, size: 24),
                     ),
                     label: const Text(

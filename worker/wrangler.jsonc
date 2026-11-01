@@ -1,0 +1,18 @@
+{
+  "name": "smartrig-proxy",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  // functions/src/amazon.ts uses node:crypto
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "FIREBASE_PROJECT_ID": "easybuild-3275c"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "smartrig-proxy",
+      "database_id": "8e62bb3e-48be-480e-8871-ce77872aa604"
+    }
+  ]
+  // RAPIDAPI_KEY is a secret: npx wrangler secret put RAPIDAPI_KEY
+}

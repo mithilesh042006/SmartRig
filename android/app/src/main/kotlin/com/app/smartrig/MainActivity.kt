@@ -1,4 +1,4 @@
-package com.example.pc_buildere
+package com.app.smartrig
 
 import io.flutter.embedding.android.FlutterActivity
 

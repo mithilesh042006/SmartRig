@@ -221,7 +221,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 width: 100,
                                 height: 100,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
+                                errorBuilder: (_, _, _) => Container(
                                   width: 100,
                                   height: 100,
                                   color: Colors.grey[800],
@@ -314,7 +314,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ? Image.network(
                 imageUrl,
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Container(
+                errorBuilder: (_, _, _) => Container(
                   color: Colors.grey[900],
                   child: const Icon(Icons.image_not_supported, size: 64),
                 ),
@@ -341,7 +341,7 @@ class ProductDetailScreenWithActions extends ConsumerWidget {
       body: ProductDetailScreen(component: component),
       bottomNavigationBar: detailsAsync.when(
         loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
         data: (details) => SafeArea(
           child: Container(
             padding: const EdgeInsets.all(16),

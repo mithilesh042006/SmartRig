@@ -58,17 +58,6 @@ final buildProvider = NotifierProvider<BuildNotifier, BuildState>(
 // API Service provider
 final amazonApiServiceProvider = Provider((ref) => AmazonApiService());
 
-// Search query state - simple map-based approach
-final _searchQueries = <ComponentType, String>{};
-
-String _getSearchQuery(ComponentType type) {
-  return _searchQueries[type] ?? AmazonApiService.getDefaultQuery(type);
-}
-
-void setSearchQuery(ComponentType type, String query) {
-  _searchQueries[type] = query;
-}
-
 // Components provider - fetches from API
 final componentsProvider = FutureProvider.family
     .autoDispose<List<Component>, ({ComponentType type, String query})>((
@@ -81,6 +70,3 @@ final componentsProvider = FutureProvider.family
         componentType: args.type,
       );
     });
-
-// Helper to get current query for a type
-String getCurrentQuery(ComponentType type) => _getSearchQuery(type);

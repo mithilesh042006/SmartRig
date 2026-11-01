@@ -1,5 +1,7 @@
 import '../models/component.dart';
 import '../providers/build_provider.dart';
+import 'compatibility_service.dart';
+import 'model_resolver.dart';
 
 /// Reference benchmark scores for normalization
 class BenchmarkReference {
@@ -68,16 +70,23 @@ enum BottleneckType { cpu, gpu, balanced }
 
 /// Performance estimation service
 class PerformanceService {
+  // Lookup tables are matched in insertion order, first match wins, so each
+  // table lists specific model/tier keys before generic brand names.
+
   /// Reference CPU benchmarks (PassMark scores)
   static const Map<String, double> cpuBenchmarks = {
-    'Intel': 28000,
-    'AMD': 32000,
-    'Core': 25000,
-    'Ryzen': 30000,
     'i9': 35000,
     'i7': 28000,
     'i5': 20000,
     'i3': 12000,
+    'Ryzen 9': 35000,
+    'Ryzen 7': 28000,
+    'Ryzen 5': 20000,
+    'Ryzen 3': 12000,
+    'Ryzen': 30000,
+    'Core': 25000,
+    'Intel': 28000,
+    'AMD': 32000,
   };
 
   /// Reference GPU benchmarks (PassMark scores)
@@ -85,13 +94,19 @@ class PerformanceService {
     'RTX 4090': 40000,
     'RTX 4080': 35000,
     'RTX 4070': 28000,
+    'RTX 4060': 19500,
     'RTX 3090': 30000,
     'RTX 3080': 25000,
     'RTX 3070': 22000,
     'RTX 3060': 17000,
     'RX 7900': 32000,
     'RX 7800': 26000,
+    'RX 7700': 23500,
     'RX 6800': 23000,
+    'RX 6700': 19000,
+    'Arc A770': 14000,
+    'Arc A750': 13000,
+    'Arc A580': 11500,
     'GeForce': 18000,
     'Radeon': 20000,
     'NVIDIA': 20000,
@@ -116,10 +131,16 @@ class PerformanceService {
     'RTX 3090': 350,
     'RTX 3080': 320,
     'RTX 3070': 220,
+    'RTX 4060': 115,
     'RTX 3060': 170,
     'RX 7900': 355,
     'RX 7800': 263,
+    'RX 7700': 245,
     'RX 6800': 250,
+    'RX 6700': 230,
+    'Arc A770': 225,
+    'Arc A750': 225,
+    'Arc A580': 185,
   };
 
   /// Sample games for FPS prediction
@@ -179,11 +200,12 @@ class PerformanceService {
     }
 
     // Power consumption
-    final cpuTdpValue = _estimateCpuTdp(cpu.name);
-    final gpuTdpValue = _estimateGpuTdp(gpu.name);
-    final otherPower = 50; // MB, RAM, storage, fans
-    final totalPower = cpuTdpValue + gpuTdpValue + otherPower;
-    final recommendedPsu = (totalPower * 1.4).round();
+    // Catalogue data when the model is known, so this agrees with the PSU check.
+    const resolver = ModelResolver();
+    final power = PowerEstimate(
+      cpuW: resolver.cpu(cpu.name).maxPowerW ?? _estimateCpuTdp(cpu.name),
+      gpuW: resolver.gpu(gpu.name).boardPowerW ?? _estimateGpuTdp(gpu.name),
+    );
 
     // Bottleneck analysis
     final bottleneck = _analyzeBottleneck(cpuScore, gpuScore);
@@ -193,47 +215,34 @@ class PerformanceService {
       gpuScore: gpuScore,
       systemScore: systemScore,
       gameFps: gameFps,
-      totalPowerW: totalPower,
-      recommendedPsuW: recommendedPsu,
+      totalPowerW: power.totalW,
+      recommendedPsuW: power.recommendedPsuW,
       bottleneck: bottleneck.$1,
       bottleneckPercentage: bottleneck.$2,
     );
   }
 
-  double _estimateCpuScore(String name) {
-    for (final entry in cpuBenchmarks.entries) {
-      if (name.toLowerCase().contains(entry.key.toLowerCase())) {
-        return entry.value;
-      }
-    }
-    return 15000; // Default mid-range
-  }
+  double _estimateCpuScore(String name) =>
+      _lookup(cpuBenchmarks, name) ?? 15000; // Default mid-range
 
-  double _estimateGpuScore(String name) {
-    for (final entry in gpuBenchmarks.entries) {
-      if (name.toLowerCase().contains(entry.key.toLowerCase())) {
-        return entry.value;
-      }
-    }
-    return 15000; // Default mid-range
-  }
+  double _estimateGpuScore(String name) =>
+      _lookup(gpuBenchmarks, name) ?? 15000; // Default mid-range
 
-  int _estimateCpuTdp(String name) {
-    for (final entry in cpuTdp.entries) {
-      if (name.toLowerCase().contains(entry.key.toLowerCase())) {
-        return entry.value;
-      }
-    }
-    return 65; // Default
-  }
+  int _estimateCpuTdp(String name) => _lookup(cpuTdp, name) ?? 65;
 
-  int _estimateGpuTdp(String name) {
-    for (final entry in gpuTdp.entries) {
-      if (name.toLowerCase().contains(entry.key.toLowerCase())) {
-        return entry.value;
-      }
+  int _estimateGpuTdp(String name) => _lookup(gpuTdp, name) ?? 200;
+
+  /// Returns the value of the first key found in [name] as a whole word
+  /// (case-insensitive), so "i5" matches "Core i5-12400" but not "Xi5".
+  static T? _lookup<T>(Map<String, T> table, String name) {
+    for (final entry in table.entries) {
+      final pattern = RegExp(
+        '(?<![a-z0-9])${RegExp.escape(entry.key)}(?![a-z0-9])',
+        caseSensitive: false,
+      );
+      if (pattern.hasMatch(name)) return entry.value;
     }
-    return 200; // Default
+    return null;
   }
 
   FpsResult _calculateGameFps(

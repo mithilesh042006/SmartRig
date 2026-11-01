@@ -1,0 +1,95 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // ---- Private builds: only the owner can see or change them ----
+    match /users/{uid}/builds/{buildId} {
+      allow read, delete: if isUser(uid);
+      allow create, update: if isUser(uid)
+        && request.resource.data.userId == uid;
+    }
+
+    // ---- Public (community) builds ----
+    match /public_builds/{buildId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.isPublic == true
+        && request.resource.data.likedBy == []
+        && request.resource.data.likesCount == 0;
+
+      // Owner may edit their build, but not its owner or like data.
+      allow update: if isOwnerEdit() || isLikeToggle();
+
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+
+      function isOwnerEdit() {
+        return signedIn()
+          && resource.data.userId == request.auth.uid
+          && !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['userId', 'likedBy', 'likesCount']);
+      }
+
+      // Any signed-in user may add or remove only their own UID from
+      // likedBy, and likesCount must stay equal to likedBy.size().
+      function isLikeToggle() {
+        let uid = request.auth.uid;
+        let before = resource.data.likedBy;
+        let after = request.resource.data.likedBy;
+        let liking = !(uid in before)
+          && after.toSet() == before.toSet().union([uid].toSet())
+          && after.size() == before.size() + 1;
+        let unliking = (uid in before)
+          && after.toSet() == before.toSet().difference([uid].toSet())
+          && after.size() == before.size() - 1;
+        return signedIn()
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['likedBy', 'likesCount'])
+          && after is list
+          && request.resource.data.likesCount == after.size()
+          && (liking || unliking);
+      }
+
+      // ---- Comments on a public build ----
+      match /comments/{commentId} {
+        allow read: if signedIn();
+
+        allow create: if signedIn()
+          && exists(/databases/$(database)/documents/public_builds/$(buildId))
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.buildId == buildId
+          && request.resource.data.id == commentId
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 1000
+          && request.resource.data.createdAt is timestamp;
+
+        allow update: if false;
+
+        // The author may delete their comment. The build owner may delete
+        // any comment on their build, so deleting a build can clear its
+        // comments (in the same batch, get() still sees the build).
+        allow delete: if signedIn()
+          && (resource.data.userId == request.auth.uid
+            || get(/databases/$(database)/documents/public_builds/$(buildId))
+                .data.userId == request.auth.uid);
+      }
+    }
+
+    // Everything else, including the server-only api_cache and rate_limits
+    // used by the Amazon proxy (Admin SDK bypasses these rules), is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

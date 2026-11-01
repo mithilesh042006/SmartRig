@@ -140,14 +140,12 @@ class Build3DViewerScreen extends ConsumerWidget {
     if (hasRam) {
       return 'assets/case_motherboard_ram.glb';
     }
-    if (hasCpu) {
-      return 'assets/case_motherboard_cpu.glb';
-    }
-    if (hasMotherboard) {
+    // No dedicated CPU or PSU models yet; these stages reuse the closest model.
+    if (hasCpu || hasMotherboard) {
       return 'assets/case_motherboard.glb';
     }
     if (hasPowerSupply) {
-      return 'assets/case_powersource.glb';
+      return 'assets/case_cooling.glb';
     }
     // Default: just the case
     return 'assets/case.glb';
