@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/component.dart';
+import '../models/component_type_ui.dart';
 import '../providers/build_provider.dart';
 import '../services/amazon_api_service.dart';
+import '../theme/app_tokens.dart';
+import '../utils/formatters.dart';
+import '../widgets/build_widgets.dart';
+import '../widgets/rig_feedback.dart';
+import '../widgets/rig_surfaces.dart';
 
 // Provider for fetching product details
 final productDetailsProvider = FutureProvider.family<ProductDetails, String>((
@@ -17,7 +23,14 @@ final productDetailsProvider = FutureProvider.family<ProductDetails, String>((
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final Component component;
 
-  const ProductDetailScreen({super.key, required this.component});
+  /// True when opened from selection, where the product isn't in the build yet.
+  final bool canAddToBuild;
+
+  const ProductDetailScreen({
+    super.key,
+    required this.component,
+    this.canAddToBuild = false,
+  });
 
   @override
   ConsumerState<ProductDetailScreen> createState() =>
@@ -27,423 +40,337 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
 class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   String? _selectedImageUrl;
 
+  Future<void> _openOnAmazon(ProductDetails? details) async {
+    final url =
+        details?.productUrl ?? widget.component.specs['ProductUrl'] as String?;
+    if (url == null || url.isEmpty) {
+      showRigSnack(context, 'Product link not available');
+      return;
+    }
+
+    try {
+      final launched = await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && mounted) showRigSnack(context, 'Could not open Amazon');
+    } catch (_) {
+      if (mounted) showRigSnack(context, 'Could not open Amazon');
+    }
+  }
+
+  void _addToBuild(ProductDetails? details) {
+    final component = widget.component;
+    // Details can lack a field the search result had, so keep what's known.
+    final updated = details == null
+        ? component
+        : Component(
+            id: component.id,
+            name: details.title,
+            brand: details.brand ?? component.brand,
+            type: component.type,
+            price: details.price > 0 ? details.price : component.price,
+            imageUrl: details.imageUrl ?? component.imageUrl,
+            specs: {
+              ...component.specs,
+              'Rating': details.rating ?? component.specs['Rating'] ?? 'N/A',
+              'Reviews':
+                  details.reviewCount ?? component.specs['Reviews'] ?? '0',
+              'ProductUrl':
+                  details.productUrl ?? component.specs['ProductUrl'] ?? '',
+            },
+          );
+    ref.read(buildProvider.notifier).selectComponent(updated);
+    // Back past the selection screen to the builder.
+    Navigator.of(context)
+      ..pop()
+      ..pop();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final detailsAsync = ref.watch(productDetailsProvider(widget.component.id));
+    final provider = productDetailsProvider(widget.component.id);
+    final detailsAsync = ref.watch(provider);
+    final details = detailsAsync.value;
 
     return Scaffold(
-      body: detailsAsync.when(
-        loading: () => const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading product details...'),
-            ],
+      body: CustomScrollView(
+        slivers: [
+          _GalleryHeader(
+            imageUrl:
+                _selectedImageUrl ??
+                details?.imageUrl ??
+                widget.component.imageUrl,
+            fallbackIcon: widget.component.type.icon,
           ),
-        ),
-        error: (error, stack) => _buildErrorState(context, ref, error),
-        data: (details) {
-          // Initialize selected image if not set
-          _selectedImageUrl ??= details.imageUrl;
-          return _buildDetailsView(context, ref, details);
-        },
-      ),
-    );
-  }
-
-  Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
-    return CustomScrollView(
-      slivers: [
-        _buildAppBar(context, widget.component.imageUrl),
-        SliverFillRemaining(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 48,
-                    color: Colors.redAccent,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error: $error',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.redAccent),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => ref.invalidate(
-                      productDetailsProvider(widget.component.id),
-                    ),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDetailsView(
-    BuildContext context,
-    WidgetRef ref,
-    ProductDetails details,
-  ) {
-    return CustomScrollView(
-      slivers: [
-        _buildAppBar(context, _selectedImageUrl ?? details.imageUrl),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Brand
-                if (details.brand != null)
-                  Text(
-                    details.brand!,
-                    style: const TextStyle(
-                      color: Colors.blueAccent,
-                      fontSize: 14,
-                    ),
-                  ),
-                const SizedBox(height: 8),
-
-                // Title
-                Text(
-                  details.title,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Rating and Reviews
-                Row(
-                  children: [
-                    if (details.rating != null) ...[
-                      const Icon(Icons.star, color: Colors.amber, size: 20),
-                      const SizedBox(width: 4),
-                      Text(
-                        details.rating!,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    if (details.reviewCount != null)
-                      Text(
-                        '(${details.reviewCount} reviews)',
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Price
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.greenAccent.withAlpha(30),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Price', style: TextStyle(fontSize: 16)),
-                      Text(
-                        details.priceDisplay ??
-                            '\$${details.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.greenAccent
-                              : Colors.green[700],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Image Gallery - Now Interactive!
-                if (details.images.isNotEmpty) ...[
-                  const Text(
-                    'Product Images',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Tap an image to view it larger',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 100,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: details.images.length,
-                      itemBuilder: (context, index) {
-                        final imageUrl = details.images[index];
-                        final isSelected = _selectedImageUrl == imageUrl;
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _selectedImageUrl = imageUrl;
-                            });
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isSelected
-                                    ? Colors.blueAccent
-                                    : Colors.grey[700]!,
-                                width: isSelected ? 3 : 1,
-                              ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Image.network(
-                                imageUrl,
-                                width: 100,
-                                height: 100,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => Container(
-                                  width: 100,
-                                  height: 100,
-                                  color: Colors.grey[800],
-                                  child: const Icon(Icons.image_not_supported),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-
-                // Description
-                if (details.description != null &&
-                    details.description!.isNotEmpty) ...[
-                  const Text(
-                    'Description',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    details.description!,
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.grey[300]
-                          : Colors.grey[800],
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-
-                // Features
-                if (details.features.isNotEmpty) ...[
-                  const Text(
-                    'Key Features',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  ...details.features.map(
-                    (f) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
+          SliverToBoxAdapter(
+            child: ContentWidth(
+              child: Padding(
+                padding: const EdgeInsets.all(Space.screen),
+                child: detailsAsync.when(
+                  loading: () => _ProductSummary(
+                    title: widget.component.name,
+                    price: widget.component.price,
+                    footer: const Padding(
+                      padding: EdgeInsets.only(top: Space.xl),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(
-                            Icons.check_circle,
-                            color: Colors.greenAccent,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              f['feature'] ?? '',
-                              style: TextStyle(
-                                color:
-                                    Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.grey[300]
-                                    : Colors.grey[800],
-                              ),
-                            ),
-                          ),
+                          Skeleton(width: 120, height: 18),
+                          SizedBox(height: Space.md),
+                          Skeleton(),
+                          SizedBox(height: Space.sm),
+                          Skeleton(),
+                          SizedBox(height: Space.sm),
+                          Skeleton(width: 200),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                ],
-
-                // Spacer for bottom buttons
-                const SizedBox(height: 80),
-              ],
+                  error: (error, _) => _ProductSummary(
+                    title: widget.component.name,
+                    price: widget.component.price,
+                    footer: ErrorState(
+                      error: error,
+                      title: 'Could not load the full details',
+                      onRetry: () => ref.invalidate(provider),
+                    ),
+                  ),
+                  data: (details) => _ProductSummary(
+                    title: details.title,
+                    brand: details.brand,
+                    rating: details.rating,
+                    reviewCount: details.reviewCount,
+                    priceDisplay: details.priceDisplay,
+                    price: details.price > 0
+                        ? details.price
+                        : widget.component.price,
+                    footer: _DetailsBody(
+                      details: details,
+                      selectedImageUrl: _selectedImageUrl ?? details.imageUrl,
+                      onSelectImage: (url) =>
+                          setState(() => _selectedImageUrl = url),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  SliverAppBar _buildAppBar(BuildContext context, String? imageUrl) {
-    return SliverAppBar(
-      expandedHeight: 300,
-      pinned: true,
-      flexibleSpace: FlexibleSpaceBar(
-        background: imageUrl != null
-            ? Image.network(
-                imageUrl,
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => Container(
-                  color: Colors.grey[900],
-                  child: const Icon(Icons.image_not_supported, size: 64),
+        ],
+      ),
+      bottomNavigationBar: RigActionBar(
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _openOnAmazon(details),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: Space.md),
                 ),
-              )
-            : Container(
-                color: Colors.grey[900],
-                child: const Icon(Icons.memory, size: 64),
+                icon: const Icon(Icons.open_in_new, size: 18),
+                label: const Text(
+                  'Buy on Amazon',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+            ),
+            if (widget.canAddToBuild) ...[
+              const SizedBox(width: Space.md),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => _addToBuild(details),
+                  child: const Text(
+                    'Add to Build',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class ProductDetailScreenWithActions extends ConsumerWidget {
-  final Component component;
+class _GalleryHeader extends StatelessWidget {
+  final String? imageUrl;
+  final IconData fallbackIcon;
 
-  const ProductDetailScreenWithActions({super.key, required this.component});
+  const _GalleryHeader({required this.imageUrl, required this.fallbackIcon});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final detailsAsync = ref.watch(productDetailsProvider(component.id));
-
-    return Scaffold(
-      body: ProductDetailScreen(component: component),
-      bottomNavigationBar: detailsAsync.when(
-        loading: () => const SizedBox.shrink(),
-        error: (_, _) => const SizedBox.shrink(),
-        data: (details) => SafeArea(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(50),
-                  blurRadius: 10,
-                  offset: const Offset(0, -4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final url = details.productUrl;
-                      if (url == null || url.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Product link not available'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
-                        return;
-                      }
-
-                      final uri = Uri.parse(url);
-                      try {
-                        final launched = await launchUrl(
-                          uri,
-                          mode: LaunchMode.externalApplication,
-                        );
-                        if (!launched && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Could not open Amazon'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.shopping_cart),
-                    label: const Text('Buy on Amazon'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      // Create updated component with full details
-                      final updatedComponent = Component(
-                        id: component.id,
-                        name: details.title,
-                        brand: details.brand ?? component.brand,
-                        type: component.type,
-                        price: details.price,
-                        imageUrl: details.imageUrl,
-                        specs: {
-                          ...component.specs,
-                          'Rating': details.rating ?? 'N/A',
-                          'Reviews': details.reviewCount ?? '0',
-                          'ProductUrl': details.productUrl ?? '',
-                        },
-                      );
-                      ref
-                          .read(buildProvider.notifier)
-                          .selectComponent(updatedComponent);
-                      // Pop back to builder screen
-                      Navigator.of(context)
-                        ..pop()
-                        ..pop();
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add to Build'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+  Widget build(BuildContext context) {
+    final c = context.rig;
+    return SliverAppBar(
+      expandedHeight: 320,
+      pinned: true,
+      backgroundColor: c.background,
+      leading: Padding(
+        padding: const EdgeInsets.all(Space.xs + 2),
+        child: IconButton.filledTonal(
+          tooltip: 'Back',
+          style: IconButton.styleFrom(
+            backgroundColor: c.surface,
+            foregroundColor: c.textPrimary,
           ),
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.maybePop(context),
         ),
       ),
+      flexibleSpace: FlexibleSpaceBar(
+        background: ProductImage(url: imageUrl, fallbackIcon: fallbackIcon),
+      ),
+    );
+  }
+}
+
+class _ProductSummary extends StatelessWidget {
+  final String title;
+  final String? brand;
+  final String? rating;
+  final String? reviewCount;
+  final String? priceDisplay;
+  final double price;
+  final Widget footer;
+
+  const _ProductSummary({
+    required this.title,
+    required this.price,
+    required this.footer,
+    this.brand,
+    this.rating,
+    this.reviewCount,
+    this.priceDisplay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.rig;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (brand != null && brand!.isNotEmpty) ...[
+          Text(
+            brand!,
+            style: context.text.labelLarge!.copyWith(color: c.accent),
+          ),
+          const SizedBox(height: Space.xs),
+        ],
+        Text(title, style: context.text.titleLarge),
+        const SizedBox(height: Space.md),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                priceDisplay ?? formatPrice(price),
+                style: price > 0 || priceDisplay != null
+                    ? context.metric(28)
+                    : context.text.bodyMedium,
+              ),
+            ),
+            if (rating != null)
+              RigPill(label: rating!, icon: Icons.star, color: c.warning),
+          ],
+        ),
+        if (reviewCount != null) ...[
+          const SizedBox(height: Space.xs),
+          Text('$reviewCount reviews', style: context.text.bodySmall),
+        ],
+        footer,
+      ],
+    );
+  }
+}
+
+class _DetailsBody extends StatelessWidget {
+  final ProductDetails details;
+  final String? selectedImageUrl;
+  final ValueChanged<String> onSelectImage;
+
+  const _DetailsBody({
+    required this.details,
+    required this.selectedImageUrl,
+    required this.onSelectImage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.rig;
+    final description = details.description;
+    final features = details.features
+        .map((f) => f['feature'] ?? '')
+        .where((f) => f.isNotEmpty)
+        .toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (details.images.length > 1) ...[
+          const SizedBox(height: Space.xl),
+          SizedBox(
+            height: 76,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: details.images.length,
+              separatorBuilder: (_, _) => const SizedBox(width: Space.sm),
+              itemBuilder: (context, index) {
+                final url = details.images[index];
+                final selected = selectedImageUrl == url;
+                return Semantics(
+                  button: true,
+                  selected: selected,
+                  label: 'Product image ${index + 1}',
+                  excludeSemantics: true,
+                  child: GestureDetector(
+                    onTap: () => onSelectImage(url),
+                    child: AnimatedContainer(
+                      duration: Motion.of(context, Motion.fast),
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(Radii.md),
+                        border: Border.all(
+                          color: selected ? c.accent : c.border,
+                          width: selected ? 2 : 1,
+                        ),
+                      ),
+                      child: ProductImage(url: url, size: 72),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+        if (description != null && description.isNotEmpty) ...[
+          const SizedBox(height: Space.xxl),
+          const SectionHeader(title: 'Description'),
+          Text(
+            description,
+            style: context.text.bodyMedium!.copyWith(color: c.textSecondary),
+          ),
+        ],
+        if (features.isNotEmpty) ...[
+          const SizedBox(height: Space.xxl),
+          const SectionHeader(title: 'Key features'),
+          for (final feature in features)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Space.sm + 2),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.check_circle, size: 18, color: c.success),
+                  const SizedBox(width: Space.sm + 2),
+                  Expanded(
+                    child: Text(feature, style: context.text.bodyMedium),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ],
     );
   }
 }

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/component_type_ui.dart';
-import '../providers/build_provider.dart';
-import '../services/saved_builds_service.dart';
 import '../services/performance_service.dart';
+import '../services/saved_builds_service.dart';
+import '../theme/app_tokens.dart';
+import '../utils/formatters.dart';
+import '../widgets/build_widgets.dart';
+import '../widgets/rig_feedback.dart';
+import '../widgets/rig_performance.dart';
+import '../widgets/rig_surfaces.dart';
 
 class CompareBuildsScreen extends ConsumerStatefulWidget {
   const CompareBuildsScreen({super.key});
@@ -14,277 +19,142 @@ class CompareBuildsScreen extends ConsumerStatefulWidget {
 }
 
 class _CompareBuildsScreenState extends ConsumerState<CompareBuildsScreen> {
-  final List<SavedBuild> _selectedBuilds = [];
+  static const _maxBuilds = 3;
+
+  // By ID, because the Firestore stream creates new objects on every update.
+  final List<String> _selectedIds = [];
   bool _isSelecting = true;
 
   @override
   Widget build(BuildContext context) {
-    if (_isSelecting) {
-      return _buildSelectionScreen();
-    }
-    return _buildComparisonScreen();
+    final buildsAsync = ref.watch(savedBuildsStreamProvider);
+    if (_isSelecting) return _buildSelectionScreen(buildsAsync);
+
+    final builds = buildsAsync.value ?? const <SavedBuild>[];
+    final selected = [
+      for (final id in _selectedIds) ...builds.where((build) => build.id == id),
+    ];
+    return _buildComparisonScreen(selected);
   }
 
-  Widget _buildSelectionScreen() {
-    final buildsAsync = ref.watch(savedBuildsStreamProvider);
+  Widget _buildSelectionScreen(AsyncValue<List<SavedBuild>> buildsAsync) {
+    final enoughSelected = _selectedIds.length >= 2;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Select Builds to Compare'),
-        actions: [
-          if (_selectedBuilds.length >= 2)
-            TextButton(
-              onPressed: () => setState(() => _isSelecting = false),
-              child: const Text('Compare'),
+      appBar: AppBar(title: const Text('Compare Builds')),
+      body: buildsAsync.when(
+        loading: () => const SkeletonList(
+          count: 4,
+          imageSize: 40,
+          semanticLabel: 'Loading saved builds',
+        ),
+        error: (error, stack) => ErrorState(
+          error: error,
+          title: 'Could not load your builds',
+          onRetry: () => ref.invalidate(savedBuildsStreamProvider),
+        ),
+        data: (builds) {
+          if (builds.isEmpty) {
+            return const EmptyState(
+              icon: Icons.compare_arrows,
+              title: 'No builds to compare',
+              message: 'Save at least two builds, then compare them here.',
+            );
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(
+              Space.screen,
+              Space.sm,
+              Space.screen,
+              Space.xl,
             ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            color: Colors.blueAccent.withAlpha(30),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.info_outline,
-                  size: 18,
-                  color: Colors.blueAccent,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Selected: ${_selectedBuilds.length}/3 builds',
-                  style: const TextStyle(color: Colors.blueAccent),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: buildsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-              data: (builds) {
-                if (builds.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'No saved builds to compare.\nSave some builds first!',
+            itemCount: builds.length + 1,
+            separatorBuilder: (_, _) => const SizedBox(height: Space.md),
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return ContentWidth(
+                  child: Text(
+                    'Choose 2 or 3 builds. Selected: ${_selectedIds.length}/$_maxBuilds',
+                    style: context.text.bodyMedium!.copyWith(
+                      color: context.rig.textSecondary,
                     ),
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: builds.length,
-                  itemBuilder: (context, index) {
-                    final build = builds[index];
-                    final isSelected = _selectedBuilds.contains(build);
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      color: isSelected
-                          ? Colors.blueAccent.withAlpha(50)
-                          : null,
-                      child: ListTile(
-                        leading: Checkbox(
-                          value: isSelected,
-                          onChanged: (value) => _toggleSelection(build),
-                        ),
-                        title: Text(build.name),
-                        subtitle: Text(
-                          '\$${build.totalPrice.toStringAsFixed(2)}',
-                        ),
-                        trailing: Text('${build.components.length} parts'),
-                        onTap: () => _toggleSelection(build),
-                      ),
-                    );
-                  },
+                  ),
                 );
-              },
-            ),
+              }
+              final build = builds[index - 1];
+              return ContentWidth(
+                child: _SelectableBuildCard(
+                  savedBuild: build,
+                  selected: _selectedIds.contains(build.id),
+                  onToggle: () => _toggleSelection(build),
+                ),
+              );
+            },
+          );
+        },
+      ),
+      bottomNavigationBar: RigActionBar(
+        child: FilledButton(
+          onPressed: enoughSelected
+              ? () => setState(() => _isSelecting = false)
+              : null,
+          child: Text(
+            enoughSelected
+                ? 'Compare ${_selectedIds.length} builds'
+                : 'Select at least 2 builds',
           ),
-        ],
+        ),
       ),
     );
   }
 
   void _toggleSelection(SavedBuild build) {
-    setState(() {
-      if (_selectedBuilds.contains(build)) {
-        _selectedBuilds.remove(build);
-      } else if (_selectedBuilds.length < 3) {
-        _selectedBuilds.add(build);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Maximum 3 builds for comparison')),
-        );
-      }
-    });
+    if (_selectedIds.contains(build.id)) {
+      setState(() => _selectedIds.remove(build.id));
+    } else if (_selectedIds.length < _maxBuilds) {
+      setState(() => _selectedIds.add(build.id));
+    } else {
+      showRigSnack(context, 'Maximum $_maxBuilds builds for comparison');
+    }
   }
 
-  Widget _buildComparisonScreen() {
-    const service = PerformanceService();
-
+  Widget _buildComparisonScreen(List<SavedBuild> builds) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Compare Builds'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+        title: const Text('Comparison'),
+        leading: BackButton(
           onPressed: () => setState(() => _isSelecting = true),
         ),
       ),
       body: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: _selectedBuilds.map((build) {
-              // Convert SavedBuild to BuildState for performance calculation
-              final buildState = BuildState(
-                selectedComponents: build.components.map(
-                  (key, value) => MapEntry(key, value),
-                ),
-              );
-              final result = service.calculatePerformance(buildState);
-
-              return Container(
-                width: 280,
-                margin: const EdgeInsets.only(right: 16),
-                child: _buildComparisonCard(build, result),
-              );
-            }).toList(),
-          ),
+        padding: const EdgeInsets.fromLTRB(
+          Space.screen,
+          Space.sm,
+          Space.screen,
+          Space.xl,
         ),
-      ),
-    );
-  }
-
-  Widget _buildComparisonCard(SavedBuild build, PerformanceResult? result) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Build name
             Text(
-              build.name,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              'Estimates, not measured results. Swipe sideways to see every build.',
+              style: context.text.bodySmall,
             ),
-            const Divider(height: 24),
-
-            // Total Price
-            _buildMetricRow(
-              'Total Price',
-              '\$${build.totalPrice.toStringAsFixed(2)}',
-              Colors.greenAccent,
-            ),
-            const SizedBox(height: 16),
-
-            if (result != null) ...[
-              // System Score
-              _buildMetricRow(
-                'Est. System Score',
-                result.systemScore.toStringAsFixed(0),
-                Colors.blueAccent,
-              ),
-              const SizedBox(height: 8),
-
-              // CPU Score
-              _buildMetricRow(
-                'CPU Score',
-                result.cpuScore.toStringAsFixed(0),
-                Colors.cyan,
-              ),
-              const SizedBox(height: 8),
-
-              // GPU Score
-              _buildMetricRow(
-                'GPU Score',
-                result.gpuScore.toStringAsFixed(0),
-                Colors.purple,
-              ),
-              const SizedBox(height: 16),
-
-              // FPS Section
-              const Text(
-                'Estimated FPS (1080p)',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              ...result.gameFps.entries
-                  .take(3)
-                  .map(
-                    (e) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              e.key.split(' ').first,
-                              style: const TextStyle(fontSize: 12),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Text(
-                            '${e.value.fps1080p} FPS',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.greenAccent,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              const SizedBox(height: 16),
-
-              // Power
-              _buildMetricRow(
-                'Power Draw',
-                '${result.totalPowerW}W',
-                Colors.amber,
-              ),
-              const SizedBox(height: 8),
-              _buildMetricRow(
-                'Rec. PSU',
-                '${result.recommendedPsuW}W+',
-                Colors.orange,
-              ),
-              const SizedBox(height: 16),
-
-              // Bottleneck
-              _buildBottleneckChip(result),
-            ] else
-              const Text(
-                'Add CPU & GPU for performance data',
-                style: TextStyle(color: Colors.grey),
-              ),
-
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-
-            // Components list
-            const Text(
-              'Components',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            ...build.components.entries.map(
-              (e) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+            const SizedBox(height: Space.md),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: IntrinsicHeight(
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(e.key.icon, size: 16, color: Colors.grey),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        e.value.name,
-                        style: const TextStyle(fontSize: 12),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    for (final build in builds)
+                      Padding(
+                        padding: const EdgeInsets.only(right: Space.md),
+                        child: SizedBox(
+                          width: 270,
+                          child: _ComparisonCard(savedBuild: build),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -294,35 +164,172 @@ class _CompareBuildsScreenState extends ConsumerState<CompareBuildsScreen> {
       ),
     );
   }
+}
 
-  Widget _buildMetricRow(String label, String value, Color color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label),
-        Text(
-          value,
-          style: TextStyle(fontWeight: FontWeight.bold, color: color),
+class _SelectableBuildCard extends StatelessWidget {
+  final SavedBuild savedBuild;
+  final bool selected;
+  final VoidCallback onToggle;
+
+  const _SelectableBuildCard({
+    required this.savedBuild,
+    required this.selected,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      checked: selected,
+      label: savedBuild.name,
+      child: RigCard(
+        tone: selected ? RigCardTone.selected : RigCardTone.normal,
+        padding: const EdgeInsets.all(Space.md),
+        onTap: onToggle,
+        child: Row(
+          children: [
+            Checkbox(value: selected, onChanged: (_) => onToggle()),
+            const SizedBox(width: Space.xs),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    savedBuild.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.titleSmall,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    savedBuild.components.length == 1
+                        ? '1 part'
+                        : '${savedBuild.components.length} parts',
+                    style: context.text.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: Space.sm),
+            Text(
+              formatMoney(savedBuild.totalPrice, decimals: 0),
+              style: context.metric(16),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
+}
 
-  Widget _buildBottleneckChip(PerformanceResult result) {
-    final (label, color) = switch (result.bottleneck) {
-      BottleneckType.cpu => ('CPU Bottleneck', Colors.orange),
-      BottleneckType.gpu => ('GPU Bottleneck', Colors.orange),
-      BottleneckType.balanced => ('Balanced', Colors.greenAccent),
-    };
+class _ComparisonCard extends StatelessWidget {
+  final SavedBuild savedBuild;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withAlpha(30),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color),
+  const _ComparisonCard({required this.savedBuild});
+
+  @override
+  Widget build(BuildContext context) {
+    final result = performanceOf(savedBuild);
+
+    return RigCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            savedBuild.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: context.text.titleMedium,
+          ),
+          const SizedBox(height: Space.xs),
+          Text(
+            formatMoney(savedBuild.totalPrice),
+            style: context.metric(24, color: context.rig.accent),
+          ),
+          const SizedBox(height: Space.md),
+          if (result == null)
+            Text(
+              'Add a CPU and GPU to this build for performance estimates.',
+              style: context.text.bodySmall,
+            )
+          else
+            _Metrics(result: result),
+          const SizedBox(height: Space.md),
+          const Divider(),
+          const SizedBox(height: Space.md),
+          Text('Parts', style: context.text.titleSmall),
+          const SizedBox(height: Space.sm),
+          for (final entry in savedBuild.components.entries)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Space.xs + 2),
+              child: Row(
+                children: [
+                  Icon(
+                    entry.key.icon,
+                    size: 16,
+                    color: context.rig.textSecondary,
+                  ),
+                  const SizedBox(width: Space.sm),
+                  Expanded(
+                    child: Text(
+                      entry.value.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12)),
+    );
+  }
+}
+
+class _Metrics extends StatelessWidget {
+  final PerformanceResult result;
+
+  const _Metrics({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final (bottleneck, bottleneckColor, _) = bottleneckSummary(context, result);
+
+    Widget row(String label, String value, {Color? color}) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: Space.xs),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: context.text.bodySmall)),
+          const SizedBox(width: Space.sm),
+          Text(value, style: context.metric(14, color: color)),
+        ],
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        row(
+          'Est. system score',
+          result.systemScore.toStringAsFixed(0),
+          color: scoreColor(context, result.systemScore),
+        ),
+        row('CPU score', result.cpuScore.toStringAsFixed(0)),
+        row('GPU score', result.gpuScore.toStringAsFixed(0)),
+        const SizedBox(height: Space.sm),
+        Text('Estimated FPS (1080p)', style: context.text.titleSmall),
+        const SizedBox(height: Space.xs),
+        for (final entry in result.gameFps.entries)
+          row(shortGameName(entry.key), '${entry.value.fps1080p}'),
+        const SizedBox(height: Space.sm),
+        Text('Power', style: context.text.titleSmall),
+        const SizedBox(height: Space.xs),
+        row('Power draw', '${result.totalPowerW} W'),
+        row('Recommended PSU', '${result.recommendedPsuW} W+'),
+        const SizedBox(height: Space.sm),
+        RigPill(label: bottleneck, color: bottleneckColor),
+      ],
     );
   }
 }

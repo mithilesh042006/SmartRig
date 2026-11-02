@@ -3,6 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/component.dart';
 import '../models/component_type_ui.dart';
 import '../providers/build_provider.dart';
+import '../theme/app_tokens.dart';
+import '../utils/formatters.dart';
+import '../widgets/build_widgets.dart';
+import '../widgets/rig_feedback.dart';
+import '../widgets/rig_surfaces.dart';
 import 'product_detail_screen.dart';
 
 /// Predefined brands and models for each component type
@@ -118,6 +123,7 @@ class ComponentSelectionScreen extends ConsumerStatefulWidget {
 
 class _ComponentSelectionScreenState
     extends ConsumerState<ComponentSelectionScreen> {
+  final _searchController = TextEditingController();
   String? _selectedBrand;
   String? _selectedModel;
   String _searchQuery = '';
@@ -132,152 +138,111 @@ class _ComponentSelectionScreenState
     );
   }
 
-  void _performSearch() {
-    if (_selectedBrand != null && _selectedModel != null) {
-      setState(() {
-        _searchQuery = '$_selectedBrand $_selectedModel';
-      });
-    }
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // Searches run on submit, not per keystroke: each one spends RapidAPI quota.
+  void _submitSearch(String text) {
+    setState(() {
+      _selectedBrand = null;
+      _selectedModel = null;
+      _searchQuery = text.trim();
+    });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _submitSearch('');
+  }
+
+  void _selectBrand(String brand) {
+    setState(() {
+      _selectedBrand = _selectedBrand == brand ? null : brand;
+      _selectedModel = null;
+      _searchQuery = '';
+      _searchController.clear();
+    });
+  }
+
+  void _selectModel(String model) {
+    setState(() {
+      final deselect = _selectedModel == model;
+      _selectedModel = deselect ? null : model;
+      _searchQuery = deselect ? '' : '$_selectedBrand $model';
+    });
+  }
+
+  void _addToBuild(Component component) {
+    ref.read(buildProvider.notifier).selectComponent(component);
+    Navigator.pop(context);
+    showRigSnack(context, 'Added ${component.name} to your build');
   }
 
   @override
   Widget build(BuildContext context) {
+    final label = widget.componentType.label;
+
     return Scaffold(
-      appBar: AppBar(title: Text('Select ${widget.componentType.label}')),
+      appBar: AppBar(title: Text('Choose $label')),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Selection area
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(30),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Step 1: Brand Selection
-                const Text(
-                  'Select Brand',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: Colors.blueAccent,
+          ContentWidth(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.screen,
+                Space.xs,
+                Space.screen,
+                Space.md,
+              ),
+              child: TextField(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                onSubmitted: _submitSearch,
+                decoration: InputDecoration(
+                  hintText: 'Search by name or model',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: ValueListenableBuilder(
+                    valueListenable: _searchController,
+                    builder: (context, value, _) => value.text.isEmpty
+                        ? const SizedBox.shrink()
+                        : IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: 'Clear search',
+                            onPressed: _clearSearch,
+                          ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _brandsAndModels.keys.map((brand) {
-                    final isSelected = _selectedBrand == brand;
-                    return ChoiceChip(
-                      label: Text(brand),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedBrand = selected ? brand : null;
-                          _selectedModel = null;
-                          _searchQuery = ''; // Reset to default search
-                        });
-                      },
-                      selectedColor: Colors.blueAccent,
-                      labelStyle: TextStyle(
-                        color: isSelected
-                            ? Colors.white
-                            : Theme.of(context).textTheme.bodyMedium?.color,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
-                    );
-                  }).toList(),
-                ),
-
-                // Step 2: Model Selection (only show if brand selected)
-                if (_selectedBrand != null) ...[
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Select Model',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Colors.blueAccent,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _brandsAndModels[_selectedBrand]!.map((model) {
-                      final isSelected = _selectedModel == model;
-                      return ChoiceChip(
-                        label: Text(model),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedModel = selected ? model : null;
-                          });
-                          if (selected) {
-                            _performSearch();
-                          } else {
-                            setState(() => _searchQuery = '');
-                          }
-                        },
-                        selectedColor: Colors.green,
-                        labelStyle: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : Theme.of(context).textTheme.bodyMedium?.color,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-
-                // Selected info
-                if (_searchQuery.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withAlpha(30),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.check_circle,
-                          color: Colors.green,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Searching: $_searchQuery',
-                          style: const TextStyle(color: Colors.green),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
-
-          // Product list
+          _ChipRow(
+            label: 'Brand',
+            options: _brandsAndModels.keys.toList(),
+            selected: _selectedBrand,
+            onSelect: _selectBrand,
+          ),
+          AnimatedSize(
+            duration: Motion.of(context, Motion.normal),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: _selectedBrand == null
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    padding: const EdgeInsets.only(top: Space.sm),
+                    child: _ChipRow(
+                      label: 'Model',
+                      options: _brandsAndModels[_selectedBrand]!,
+                      selected: _selectedModel,
+                      onSelect: _selectModel,
+                    ),
+                  ),
+          ),
+          const SizedBox(height: Space.sm),
+          Divider(color: context.rig.border),
           Expanded(child: _buildProductList()),
         ],
       ),
@@ -285,202 +250,187 @@ class _ComponentSelectionScreenState
   }
 
   Widget _buildProductList() {
-    final componentsAsync = ref.watch(
-      componentsProvider((type: widget.componentType, query: _searchQuery)),
-    );
+    final provider = componentsProvider((
+      type: widget.componentType,
+      query: _searchQuery,
+    ));
+    final componentsAsync = ref.watch(provider);
 
     return componentsAsync.when(
-      loading: () => const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Fetching products from Amazon...'),
-          ],
-        ),
-      ),
-      error: (error, stack) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.error_outline,
-                size: 48,
-                color: Colors.redAccent,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Error: $error',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.redAccent),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(
-                  componentsProvider((
-                    type: widget.componentType,
-                    query: _searchQuery,
-                  )),
-                ),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
+      loading: () => const SkeletonList(semanticLabel: 'Loading products'),
+      error: (error, stack) => ErrorState(
+        error: error,
+        title: 'Could not load products',
+        onRetry: () => ref.invalidate(provider),
       ),
       data: (components) => components.isEmpty
-          ? const Center(child: Text('No products found'))
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
+          ? EmptyState(
+              icon: Icons.search_off,
+              title: 'No products found',
+              message: _searchQuery.isEmpty
+                  ? 'Amazon returned no products for this category.'
+                  : 'Try a different brand, model, or search.',
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(Space.screen),
               itemCount: components.length,
-              itemBuilder: (context, index) {
-                final component = components[index];
-                return _buildProductCard(component);
-              },
+              separatorBuilder: (_, _) => const SizedBox(height: Space.md),
+              itemBuilder: (context, index) => ContentWidth(
+                child: _ProductCard(
+                  component: components[index],
+                  onAdd: () => _addToBuild(components[index]),
+                  onOpen: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProductDetailScreen(
+                        component: components[index],
+                        canAddToBuild: true,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
     );
   }
+}
 
-  Widget _buildProductCard(Component component) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  ProductDetailScreenWithActions(component: component),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Product image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: component.imageUrl != null
-                    ? Image.network(
-                        component.imageUrl!,
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Container(
-                          width: 80,
-                          height: 80,
-                          color: Colors.grey[800],
-                          child: const Icon(Icons.image_not_supported),
-                        ),
-                      )
-                    : Container(
-                        width: 80,
-                        height: 80,
-                        color: Colors.grey[800],
-                        child: const Icon(Icons.memory),
-                      ),
+class _ChipRow extends StatelessWidget {
+  final String label;
+  final List<String> options;
+  final String? selected;
+  final ValueChanged<String> onSelect;
+
+  const _ChipRow({
+    required this.label,
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.rig;
+    return Semantics(
+      label: '$label filter',
+      container: true,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: Space.screen),
+        child: Row(
+          children: [
+            for (final option in options)
+              Padding(
+                padding: const EdgeInsets.only(right: Space.sm),
+                child: ChoiceChip(
+                  label: Text(option),
+                  selected: selected == option,
+                  onSelected: (_) => onSelect(option),
+                  labelStyle: context.text.labelLarge!.copyWith(
+                    color: selected == option ? c.onAccent : c.textPrimary,
+                  ),
+                ),
               ),
-              const SizedBox(width: 12),
-              // Product details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      component.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      component.brand,
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductCard extends StatelessWidget {
+  final Component component;
+  final VoidCallback onAdd;
+  final VoidCallback onOpen;
+
+  const _ProductCard({
+    required this.component,
+    required this.onAdd,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.rig;
+    final rating = component.specs['Rating'];
+    final reviews = component.specs['Reviews'];
+    final hasRating = rating != null && rating != 'N/A' && rating != '';
+    final hasReviews = reviews != null && reviews != '0' && reviews != '';
+
+    return Semantics(
+      button: true,
+      child: RigCard(
+        padding: const EdgeInsets.all(Space.md),
+        onTap: onOpen,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(Radii.md),
+              child: ProductImage(
+                url: component.imageUrl,
+                fallbackIcon: component.type.icon,
+                size: 96,
+              ),
+            ),
+            const SizedBox(width: Space.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    component.name,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.titleSmall,
+                  ),
+                  if (hasRating || hasReviews) ...[
+                    const SizedBox(height: Space.xs),
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: Space.xs,
                       children: [
-                        if (component.specs['Rating'] != null &&
-                            component.specs['Rating'] != 'N/A')
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                size: 14,
-                                color: Colors.amber,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${component.specs['Rating']}',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              const SizedBox(width: 8),
-                            ],
+                        if (hasRating) ...[
+                          Icon(Icons.star, size: 14, color: c.warning),
+                          Text('$rating', style: context.text.labelMedium),
+                        ],
+                        if (hasReviews)
+                          Text(
+                            '($reviews reviews)',
+                            style: context.text.bodySmall,
                           ),
-                        Text(
-                          '${component.specs['Reviews']} reviews',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[500],
-                          ),
-                        ),
                       ],
                     ),
                   ],
-                ),
-              ),
-              // Price and add button
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    component.priceFormatted,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.greenAccent
-                          : Colors.green[700],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  InkWell(
-                    onTap: () {
-                      ref
-                          .read(buildProvider.notifier)
-                          .selectComponent(component);
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Added ${component.name} to build'),
-                          behavior: SnackBarBehavior.floating,
+                  const SizedBox(height: Space.sm),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          formatPrice(component.price),
+                          style: component.price > 0
+                              ? context.metric(18)
+                              : context.text.bodySmall,
                         ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.blueAccent,
-                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
-                        Icons.add,
-                        size: 20,
-                        color: Colors.white,
+                      IconButton.filled(
+                        onPressed: onAdd,
+                        tooltip: 'Add ${component.name} to build',
+                        style: IconButton.styleFrom(
+                          backgroundColor: c.accent,
+                          foregroundColor: c.onAccent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(Radii.md),
+                          ),
+                        ),
+                        icon: const Icon(Icons.add),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

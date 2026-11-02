@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/component_type_ui.dart';
+import '../providers/navigation_provider.dart';
 import '../services/saved_builds_service.dart';
-import '../providers/build_provider.dart';
-import 'builder_screen.dart';
+import '../theme/app_tokens.dart';
+import '../utils/formatters.dart';
+import '../widgets/build_widgets.dart';
+import '../widgets/rig_feedback.dart';
+import '../widgets/rig_performance.dart';
+import '../widgets/rig_surfaces.dart';
 
 class SavedBuildsScreen extends ConsumerWidget {
   const SavedBuildsScreen({super.key});
@@ -13,202 +17,159 @@ class SavedBuildsScreen extends ConsumerWidget {
     final buildsAsync = ref.watch(savedBuildsStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Saved Builds'), centerTitle: true),
+      appBar: AppBar(title: const Text('Saved Builds')),
       body: buildsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) =>
-            Center(child: Text('Error loading builds: $error')),
+        loading: () => const SkeletonList(
+          count: 4,
+          imageSize: 56,
+          semanticLabel: 'Loading saved builds',
+        ),
+        error: (error, stack) => ErrorState(
+          error: error,
+          title: 'Could not load your builds',
+          onRetry: () => ref.invalidate(savedBuildsStreamProvider),
+        ),
         data: (builds) {
           if (builds.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.folder_open, size: 64, color: Colors.grey[600]),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'No saved builds yet',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Create a PC build and save it to see it here.',
-                      style: TextStyle(color: Colors.grey[500]),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+            return EmptyState(
+              icon: Icons.bookmark_add_outlined,
+              title: 'No saved builds yet',
+              message: 'Create a PC build and save it to see it here.',
+              actionLabel: 'Start Building',
+              onAction: () =>
+                  ref.read(selectedTabProvider.notifier).select(AppTab.build),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(
+              Space.screen,
+              Space.sm,
+              Space.screen,
+              Space.xl,
+            ),
             itemCount: builds.length,
-            itemBuilder: (context, index) {
-              final build = builds[index];
-              return _buildCard(context, ref, build);
-            },
+            separatorBuilder: (_, _) => const SizedBox(height: Space.md),
+            itemBuilder: (context, index) =>
+                ContentWidth(child: _SavedBuildCard(savedBuild: builds[index])),
           );
         },
       ),
     );
   }
+}
 
-  Widget _buildCard(BuildContext context, WidgetRef ref, SavedBuild build) {
-    final componentCount = build.components.length;
-    final formattedDate = _formatDate(build.createdAt);
+class _SavedBuildCard extends ConsumerWidget {
+  final SavedBuild savedBuild;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => _loadBuild(context, ref, build),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      build.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      color: Colors.redAccent,
-                    ),
-                    onPressed: () => _deleteBuild(context, ref, build),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.computer, size: 16, color: Colors.grey[500]),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$componentCount components',
-                    style: TextStyle(color: Colors.grey[500]),
-                  ),
-                  const SizedBox(width: 16),
-                  Icon(Icons.calendar_today, size: 16, color: Colors.grey[500]),
-                  const SizedBox(width: 4),
-                  Text(
-                    formattedDate,
-                    style: TextStyle(color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // Component chips
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: build.components.entries.take(4).map((entry) {
-                  return Chip(
-                    label: Text(
-                      entry.key.shortLabel,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    avatar: Icon(entry.key.icon, size: 16),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Total'),
-                  Text(
-                    '\$${build.totalPrice.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.greenAccent
-                          : Colors.green[700],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  const _SavedBuildCard({required this.savedBuild});
 
-  void _loadBuild(BuildContext context, WidgetRef ref, SavedBuild build) {
-    // Load build components into the current build state
-    final notifier = ref.read(buildProvider.notifier);
-    notifier.clearBuild();
-
-    for (final entry in build.components.entries) {
-      notifier.selectComponent(entry.value);
-    }
-
-    Navigator.of(
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await confirmAction(
       context,
-    ).push(MaterialPageRoute(builder: (context) => const BuilderScreen()));
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Loaded "${build.name}"')));
-  }
-
-  Future<void> _deleteBuild(
-    BuildContext context,
-    WidgetRef ref,
-    SavedBuild build,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Build?'),
-        content: Text('Are you sure you want to delete "${build.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      title: 'Delete build?',
+      message: 'Are you sure you want to delete "${savedBuild.name}"?',
+      confirmLabel: 'Delete',
     );
+    if (!confirmed) return;
 
-    if (confirmed == true) {
-      final service = ref.read(savedBuildsServiceProvider);
-      await service.deleteBuild(build.id, isPublic: build.isPublic);
+    try {
+      await ref
+          .read(savedBuildsServiceProvider)
+          .deleteBuild(savedBuild.id, isPublic: savedBuild.isPublic);
       // Stream auto-updates, no invalidation needed
-
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Deleted "${build.name}"')));
+        showRigSnack(context, 'Deleted "${savedBuild.name}"');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        showRigSnack(context, 'Could not delete: ${friendlyError(e)}');
       }
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.rig;
+    final result = performanceOf(savedBuild);
+
+    return Semantics(
+      button: true,
+      child: RigCard(
+        padding: const EdgeInsets.fromLTRB(
+          Space.lg,
+          Space.sm,
+          Space.xs,
+          Space.lg,
+        ),
+        onTap: () => openSavedBuild(context, ref, savedBuild),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    savedBuild.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  color: c.textSecondary,
+                  tooltip: 'Delete ${savedBuild.name}',
+                  onPressed: () => _delete(context, ref),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: Space.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    formatMoney(savedBuild.totalPrice),
+                    style: context.metric(24),
+                  ),
+                  const SizedBox(height: Space.xs),
+                  BuildHighlights(components: savedBuild.components),
+                  const SizedBox(height: Space.md),
+                  Wrap(
+                    spacing: Space.xs + 2,
+                    runSpacing: Space.xs + 2,
+                    children: [
+                      RigPill(
+                        label: savedBuild.isPublic ? 'Public' : 'Private',
+                        icon: savedBuild.isPublic ? Icons.public : Icons.lock,
+                        color: savedBuild.isPublic ? c.success : null,
+                      ),
+                      if (result != null)
+                        RigPill(
+                          label:
+                              'Est. score ${result.systemScore.toStringAsFixed(0)}',
+                          icon: Icons.speed,
+                          color: scoreColor(context, result.systemScore),
+                        ),
+                      RigPill(
+                        label: savedBuild.components.length == 1
+                            ? '1 part'
+                            : '${savedBuild.components.length} parts',
+                        icon: Icons.developer_board,
+                      ),
+                      RigPill(
+                        label: formatDate(savedBuild.createdAt),
+                        icon: Icons.calendar_today,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -6,6 +6,10 @@ import 'services/auth_service.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/login_screen.dart';
 import 'providers/theme_provider.dart';
+import 'theme/app_theme.dart';
+import 'theme/app_tokens.dart';
+import 'widgets/rig_feedback.dart';
+import 'widgets/rig_surfaces.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,10 +25,10 @@ class MyApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
-      title: 'Smart PC Builder',
+      title: 'SmartRig',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       themeMode: themeMode,
       home: const AuthWrapper(),
     );
@@ -45,10 +49,28 @@ class AuthWrapper extends ConsumerWidget {
         }
         return const LoginScreen();
       },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (error, stack) =>
-          Scaffold(body: Center(child: Text('Error: $error'))),
+      loading: () => const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RigMark(size: 64),
+              SizedBox(height: Space.xl),
+              SizedBox.square(
+                dimension: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.4),
+              ),
+            ],
+          ),
+        ),
+      ),
+      error: (error, stack) => Scaffold(
+        body: ErrorState(
+          error: error,
+          title: 'Could not check your sign-in',
+          onRetry: () => ref.invalidate(authStateProvider),
+        ),
+      ),
     );
   }
 }

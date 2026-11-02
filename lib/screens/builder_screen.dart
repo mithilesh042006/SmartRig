@@ -1,258 +1,254 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/component.dart';
+import '../models/component_type_ui.dart';
 import '../providers/build_provider.dart';
 import '../services/compatibility_service.dart';
+import '../theme/app_tokens.dart';
+import '../utils/formatters.dart';
 import '../widgets/compatibility_card.dart';
-import 'component_selection_screen.dart';
-import 'review_build_screen.dart';
-import 'product_detail_screen.dart';
+import '../widgets/rig_feedback.dart';
+import '../widgets/rig_performance.dart';
+import '../widgets/rig_surfaces.dart';
 import 'build_3d_viewer_screen.dart';
+import 'component_selection_screen.dart';
+import 'product_detail_screen.dart';
+import 'review_build_screen.dart';
 
 class BuilderScreen extends ConsumerWidget {
   const BuilderScreen({super.key});
+
+  static const _slots = [
+    ComponentType.cpu,
+    ComponentType.motherboard,
+    ComponentType.gpu,
+    ComponentType.ram,
+    ComponentType.storage,
+    ComponentType.psu,
+    ComponentType.pcCase,
+    ComponentType.cooling,
+  ];
+
+  void _push(BuildContext context, Widget screen) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+
+  Future<void> _clearBuild(BuildContext context, WidgetRef ref) async {
+    final confirmed = await confirmAction(
+      context,
+      title: 'Clear this build?',
+      message:
+          'All selected parts will be removed. Saved builds are not affected.',
+      confirmLabel: 'Clear',
+    );
+    if (confirmed) ref.read(buildProvider.notifier).clearBuild();
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final buildState = ref.watch(buildProvider);
     final compatibility = ref.watch(compatibilityProvider);
+    final hasParts = buildState.selectedComponents.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Custom PC Build'),
+        title: const Text('Your Build'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () {
-              ref.read(buildProvider.notifier).clearBuild();
-            },
-            tooltip: 'Clear Build',
-          ),
+          if (hasParts)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () => _clearBuild(context, ref),
+              tooltip: 'Clear build',
+            ),
+          const SizedBox(width: Space.xs),
         ],
       ),
-      body: Column(
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          Space.screen,
+          Space.sm,
+          Space.screen,
+          Space.xl,
+        ),
         children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16.0),
+          ContentWidth(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                _SummaryCard(state: buildState),
+                const SizedBox(height: Space.md),
                 CompatibilityCard(report: compatibility),
-                _buildSlot(
-                  context,
-                  ref,
-                  ComponentType.cpu,
-                  'CPU',
-                  Icons.memory,
-                ),
-                _buildSlot(
-                  context,
-                  ref,
-                  ComponentType.motherboard,
-                  'Motherboard',
-                  Icons.developer_board,
-                ),
-                _buildSlot(context, ref, ComponentType.gpu, 'GPU', Icons.tv),
-                _buildSlot(
-                  context,
-                  ref,
-                  ComponentType.ram,
-                  'RAM',
-                  Icons.storage,
-                ),
-                _buildSlot(
-                  context,
-                  ref,
-                  ComponentType.storage,
-                  'Storage',
-                  Icons.sd_storage,
-                ),
-                _buildSlot(
-                  context,
-                  ref,
-                  ComponentType.psu,
-                  'Power Supply',
-                  Icons.power,
-                ),
-                _buildSlot(
-                  context,
-                  ref,
-                  ComponentType.pcCase,
-                  'Case',
-                  Icons.computer,
-                ),
-                _buildSlot(
-                  context,
-                  ref,
-                  ComponentType.cooling,
-                  'Cooling',
-                  Icons.ac_unit,
-                ),
+                for (final type in _slots)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: Space.sm + 2),
+                    child: _SlotCard(
+                      type: type,
+                      component: buildState.selectedComponents[type],
+                      onSelect: () => _push(
+                        context,
+                        ComponentSelectionScreen(componentType: type),
+                      ),
+                      onView: (component) => _push(
+                        context,
+                        ProductDetailScreen(component: component),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
-          _buildSummary(context, buildState),
         ],
       ),
-    );
-  }
-
-  Widget _buildSlot(
-    BuildContext context,
-    WidgetRef ref,
-    ComponentType type,
-    String label,
-    IconData icon,
-  ) {
-    final buildState = ref.watch(buildProvider);
-    final selectedComponent = buildState.selectedComponents[type];
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: CircleAvatar(
-          backgroundColor: Colors.blueAccent.withValues(alpha: 0.1),
-          child: Icon(icon, color: Colors.blueAccent),
-        ),
-        title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(
-          selectedComponent?.name ?? 'Not Selected',
-          style: TextStyle(
-            color: selectedComponent != null
-                ? Theme.of(context).textTheme.bodyMedium?.color
-                : Colors.grey,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: selectedComponent != null
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    selectedComponent.priceFormatted,
-                    style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.greenAccent
-                          : Colors.green[700],
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit, size: 20),
-                    tooltip: 'Change component',
-                    onPressed: () => _navigateToSelection(context, type),
-                  ),
-                ],
-              )
-            : const Icon(Icons.add_circle_outline),
-        onTap: () {
-          if (selectedComponent != null) {
-            // Navigate to product detail screen for viewing
-            _navigateToProductDetail(context, selectedComponent);
-          } else {
-            // Navigate to component selection screen
-            _navigateToSelection(context, type);
-          }
-        },
-      ),
-    );
-  }
-
-  void _navigateToSelection(BuildContext context, ComponentType type) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ComponentSelectionScreen(componentType: type),
-      ),
-    );
-  }
-
-  void _navigateToProductDetail(BuildContext context, Component component) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ProductDetailScreen(component: component),
-      ),
-    );
-  }
-
-  Widget _buildSummary(BuildContext context, BuildState state) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Column(
+      bottomNavigationBar: RigActionBar(
+        child: Row(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Expanded(
+              child: FilledButton(
+                onPressed: hasParts
+                    ? () => _push(context, const ReviewBuildScreen())
+                    : null,
+                child: const Text('Review Build', maxLines: 1),
+              ),
+            ),
+            const SizedBox(width: Space.md),
+            OutlinedButton.icon(
+              onPressed: () => _push(context, const Build3DViewerScreen()),
+              icon: const Icon(Icons.view_in_ar),
+              label: const Text('View 3D', maxLines: 1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  final BuildState state;
+
+  const _SummaryCard({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.rig;
+    final count = state.selectedComponents.length;
+    final total = BuilderScreen._slots.length;
+    return RigCard(
+      padding: const EdgeInsets.all(Space.xl),
+      child: Row(
+        children: [
+          RigGauge(
+            progress: count / total,
+            color: c.accent,
+            size: 76,
+            strokeWidth: 8,
+            sweep: math.pi * 2,
+            semanticLabel: '$count of $total parts selected',
+            child: Text('$count/$total', style: context.metric(16)),
+          ),
+          const SizedBox(width: Space.xl),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Total Estimate',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-                Text(
-                  '\$${state.totalPrice.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.greenAccent
-                        : Colors.green[700],
+                Text('Estimated total', style: context.text.bodySmall),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    formatMoney(state.totalPrice),
+                    style: context.metric(28),
                   ),
+                ),
+                const SizedBox(height: Space.xs),
+                Text(
+                  count == total
+                      ? 'All parts selected'
+                      : '${total - count} more to complete this build',
+                  style: context.text.bodySmall,
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: state.totalPrice > 0
-                    ? () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const ReviewBuildScreen(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SlotCard extends StatelessWidget {
+  final ComponentType type;
+  final Component? component;
+  final VoidCallback onSelect;
+  final ValueChanged<Component> onView;
+
+  const _SlotCard({
+    required this.type,
+    required this.component,
+    required this.onSelect,
+    required this.onView,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.rig;
+    final part = component;
+    final selected = part != null;
+
+    return Semantics(
+      button: true,
+      label: selected
+          ? '${type.label}: ${part.name}. View details.'
+          : 'Add ${type.label}',
+      child: RigCard(
+        tone: selected ? RigCardTone.selected : RigCardTone.normal,
+        padding: const EdgeInsets.fromLTRB(
+          Space.md,
+          Space.md,
+          Space.xs,
+          Space.md,
+        ),
+        onTap: selected ? () => onView(part) : onSelect,
+        child: Row(
+          children: [
+            RigIconBox(
+              icon: type.icon,
+              color: selected ? c.accent : c.textSecondary,
+            ),
+            const SizedBox(width: Space.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(type.label, style: context.text.labelMedium),
+                  const SizedBox(height: 2),
+                  Text(
+                    selected ? part.name : 'Not selected',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: selected
+                        ? context.text.titleSmall
+                        : context.text.bodyMedium!.copyWith(
+                            color: c.textSecondary,
                           ),
-                        );
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text('Review Build'),
+                  ),
+                  if (selected) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      formatPrice(part.price),
+                      style: context.metric(13, color: c.accent),
+                    ),
+                  ],
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const Build3DViewerScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.view_in_ar),
-                label: const Text('View 3D Build'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: const BorderSide(color: Colors.blueAccent),
-                ),
-              ),
+            IconButton(
+              icon: Icon(selected ? Icons.swap_horiz : Icons.add_circle),
+              color: selected ? c.textSecondary : c.accent,
+              tooltip: selected ? 'Change ${type.label}' : 'Add ${type.label}',
+              onPressed: onSelect,
             ),
           ],
         ),
