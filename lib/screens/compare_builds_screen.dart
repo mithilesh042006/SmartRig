@@ -120,7 +120,7 @@ class _CompareBuildsScreenState extends ConsumerState<CompareBuildsScreen> {
   }
 
   Widget _buildComparisonScreen() {
-    final service = PerformanceService();
+    const service = PerformanceService();
 
     return Scaffold(
       appBar: AppBar(
@@ -182,7 +182,7 @@ class _CompareBuildsScreenState extends ConsumerState<CompareBuildsScreen> {
             if (result != null) ...[
               // System Score
               _buildMetricRow(
-                'System Score',
+                'Est. System Score',
                 result.systemScore.toStringAsFixed(0),
                 Colors.blueAccent,
               ),
@@ -206,7 +206,7 @@ class _CompareBuildsScreenState extends ConsumerState<CompareBuildsScreen> {
 
               // FPS Section
               const Text(
-                'Gaming FPS (1080p)',
+                'Estimated FPS (1080p)',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
@@ -275,11 +275,7 @@ class _CompareBuildsScreenState extends ConsumerState<CompareBuildsScreen> {
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Row(
                   children: [
-                    Icon(
-                      e.key.icon,
-                      size: 16,
-                      color: Colors.grey,
-                    ),
+                    Icon(e.key.icon, size: 16, color: Colors.grey),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

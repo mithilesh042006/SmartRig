@@ -1,0 +1,98 @@
+{
+  "cpu": [
+    "AMD RYZEN 7 9800X3D 8-Core, 16-Thread Desktop Processor",
+    "AMD Ryzen 9 9950X3D 16-Core Processor",
+    "AMD Ryzen 7 5800X3D 8-core, 16-Thread Desktop Processor with AMD 3D V-Cache Technology",
+    "AMD Ryzen 7 7800X3D 8-Core, 16-Thread Desktop Processor",
+    "AMD Ryzen 5 5500 6-Core, 12-Thread Unlocked Desktop Processor with Wraith Stealth Cooler",
+    "Intel Core Ultra 9 Processor 285K, 24 cores (8 P-cores + 16 E-cores) up to 5.7 GHz",
+    "AMD Ryzen™ 5 9600X 6-Core, 12-Thread Unlocked Desktop Processor",
+    "AMD Ryzen™ 9 9900X 12-Core, 24-Thread Unlocked Desktop Processor",
+    "AMD Ryzen 7 5700X 8-Core, 16-Thread Unlocked Desktop Processor",
+    "Intel® Core™ i7-12700KF Desktop Processor 12 (8P+4E) Cores up to 5.0 GHz Unlocked LGA1700 600 Series Chipset 125W"
+  ],
+  "gpu": [
+    "ASUS Prime Radeon RX 9070 XT 16GB GDDR6 OC Edition Gaming Graphics Card | PCIe 5.0, HDMI/DP 2.1, 2.5-Slot, Axial-tech Fans, Dual-Ball Fan Bearings, Dual BIOS, GPU Guard",
+    "ASUS Dual NVIDIA GeForce RTX 5060 8GB GDDR7 OC Edition (PCIe 5.0, 8GB GDDR7, DLSS 4, HDMI 2.1b, DisplayPort 2.1b, 2.5-Slot Design, Axial-tech Fan Design, 0dB Technology), 3 Year Warranty",
+    "ASUS Dual GeForce RTX 3050 6GB GDDR6 OC Edition Gaming Graphics Card",
+    "ASRock Radeon RX 7600 Challenger Pro 8GB OC, AMD RDNA 3, 8GB GDDR6, PCIe 4.0, Triple Fans, 0dB Silent, 2695MHz Boost, Triple Fan Graphics Card",
+    "ASRock Radeon RX 9070 Challenger 16GB OC Graphics Card, RDNA 4, 2520MHz Boost, 16GB GDDR6 256-bit, PCIe 5.0, Triple Fans, 0dB Silent, LED Indicator",
+    "XFX Swift AMD Radeon RX 9060 XT OC Triple Fan Gaming Edition with 16GB GDDR6 HDMI 2xDP, RDNA 4 RX-96TS316BA, Graphics Card, Compatible with Desktop PCs",
+    "ASUS ATS Radeon RX 9070 GRE 12GB GDDR6 OC Edition Gaming Graphics Card",
+    "ASRock Radeon RX 9070 XT Steel Legend 16GB Graphics Card, AMD RDNA 4 Architecture, 2970 MHz, GDDR6, PCIe 5.0, Triple Fans, Polychrome SYNC, Reinforced Metal Frame, DisplayPort 2.1a, HDMI 2.1b",
+    "ASUS TUF Gaming GeForce RTX 5070 12GB GDDR7 OC EditionGaming Graphics Card",
+    "ASUS Dual Radeon RX 9060 XT 16GB GDDR6 Gaming Graphics Card"
+  ],
+  "ram": [
+    "Patriot Viper Venom DDR5 RAM 16GB (2X8GB) 6000MT/s CL36 Desktop Memory",
+    "PNY DDR5 16GB (1x16GB) 5600MHz CL46 Performance Desktop Memory",
+    "CORSAIR Vengeance RS DDR5 32GB (2 x 16GB) Up to 6000MHz AMD Intel RAM",
+    "PNY DDR5 8GB (1x8GB) 5600MHz CL46 Performance Desktop Memory",
+    "PNY DDR5 16GB (2x8GB) 5600MHz CL46 Performance Desktop Memory Kit",
+    "CORSAIR Vengeance RGB RS DDR5 32GB (2 x 16GB) Up to 6000MHz AMD Intel RAM",
+    "Patriot Viper Venom DDR5 RAM 32GB (2X16GB) 6000MHz CL30 Desktop Memory",
+    "Patriot Viper Venom DDR5 RAM 16GB (1X16GB) 6000MHz CL30 Desktop Memory",
+    "CORSAIR Vengeance RGB DDR5 RAM 32GB (2x16GB) Up to 6000MHz CL30-36-36-76 1.40V AMD EXPO Intel XMP Desktop Computer Memory - Gray (CMH32GX5M2B6000Z30K)",
+    "G.SKILL Flare X5 Series DDR5 RAM (AMD EXPO & Intel XMP 3.0) 32GB (2x16GB) Up to 6000MT/s* CL36-36-36-96 1.35V Desktop Computer Memory U-DIMM - Matte Black (F5-6000J3636F16GX2-FX5)"
+  ],
+  "ram2": [
+    "CORSAIR Vengeance LPX DDR4 RAM 32GB (2x16GB) Up to 3200MHz CL16-20-20-38 1.35V Intel XMP AMD EXPO Computer Memory – Black (CMK32GX4M2E3200C16)",
+    "Timetec 32GB KIT (2x16GB) DDR4 2666MHz (PC4-2666V) PC4-21300 UDIMM Desktop RAM – 288-Pin 1.2V CL19 Non-ECC Unbuffered DIMM Memory Module Upgrade",
+    "KingBank Computer Desktop Memory Ram DDR4 32GB(2x16GB) 3200MHZ CL16 1.35V XMP2.0 Overclocking with Heatsink for PC Gaming/Office/PS,Silver",
+    "CORSAIR Vengeance LPX DDR4 RAM 16GB (2x8GB) Up to 3200MHz CL16-20-20-38 1.35V Intel AMD Desktop Computer Memory - Black (CMK16GX4M2E3200C16)",
+    "DIGIERA 8GB DDR4 Memory Module, 2666MHz DU260 UDIMM RAM 288-Pin Computer Memory, 1.2V CL19 Non-ECC Computer Internal Memory for Desktop",
+    "G.SKILL RipjawsV Series DDR4 RAM (XMP) 16GB (2x8GB) Up to 3200MT/s* CL16-18-18-38 1.35V Intel AMD Desktop Computer Memory U-DIMM - Black (F4-3200C16D-16GVKB)",
+    "G.SKILL RipjawsV Series DDR4 RAM (XMP) 32GB (2x16GB) Up to 3200MT/s* CL16-18-18-38 1.35V Intel AMD Desktop Computer Memory U-DIMM - Black (F4-3200C16D-32GVK)",
+    "TEAMGROUP Elite DDR4 16GB Kit (2 x 8GB) 3200MHz PC4-25600 CL22 (2933MHz or 2666MHz) Unbuffered Non-ECC 1.2V UDIMM 288 Pin PC Computer Desktop Memory Module Ram Upgrade - TED416G3200C22DC01",
+    "Silicon Power DDR4 16GB Kit (2x8GB) 3200MHz (PC4-25600) CL22 UDIMM 288-Pin Desktop Computer Memory SP016GBLFU320B22",
+    "PNY DDR4 16GB (1x16GB) 3200MHz CL22 Performance Desktop Memory"
+  ],
+  "motherboard": [
+    "GIGABYTE B650 AORUS Elite AX AMD AM5 ATX Motherboard, Support Ryzen 9000/8000/7000 Series, DDR5, 14+2+1 Power Phase, PCIe 5.0 M.2, USB-C 3.2 Gen 2, WIFI6E, 2.5GbE, EZ-Latch, Q-Flash, RGB Fusion",
+    "Asus ROG Strix B550-F Gaming WiFi II AMD AM4 (3rd Gen Ryzen) ATX DDR4 Gaming Motherboard (PCIe 4.0, WiFi 6E, 2.5Gb LAN, BIOS Flashback, HDMI 2.1, Addressable RGB Header and Aura Sync)",
+    "GIGABYTE B550 Eagle WIFI6 AMD AM4 ATX Motherboard, Supports Ryzen 5000/4000/3000 Processors, DDR4, 10+3 Power Phase, 2X M.2, PCIe 4.0, USB-C, WIFI6, GbE LAN, PCIe EZ-Latch, EZ-Latch, RGB Fusion",
+    "ASUS TUF Gaming B550-PLUS WiFi II AMD AM4 (3rd Gen Ryzen™) ATX DDR4 Gaming Motherboard (PCIe 4.0, WiFi 6, 2.5Gb LAN, BIOS Flashback, USB 3.2 Gen 2, Addressable RGB Header and Aura Sync)",
+    "GIGABYTE B850 AORUS Elite WIFI7 AMD AM5 ATX Motherboard, Support AMD Ryzen 9000/8000/7000 Series, DDR5, 14+2+2 Power Phase, 3X M.2, PCIe 5.0, USB-C, WIFI7, 2.5GbE LAN, EZ-Latch, 5-Year Warranty",
+    "MSI MAG B850 Tomahawk MAX WiFi Motherboard, ATX - Supports AMD Ryzen 9000/8000 / 7000 Processors, AM5-80A SPS VRM, DDR5 Memory Boost 8400+ MT/s (OC), PCIe 5.0 x16, M.2 Gen5, Wi-Fi 7, 5G LAN",
+    "GIGABYTE B550 Gaming X V2 AMD AM4 ATX Motherboard, Supports Ryzen 5000/4000/3000 Series Processors, DDR4, 10+3 Power Phase, 2X M.2, PCIe 4.0, Front USB-C, GbE LAN, Q-Flash Plus, RGB Fusion",
+    "GIGABYTE B650 Eagle AX AM5 LGA 1718 ATX Motherboard, DDR5, Triple M.2 Slots (1x PCIe 5.0, 2X PCIe 4.0), USB 3.2 Gen2x2 Type-C, WiFi 6E, Realtek GbE LAN",
+    "ASUS ROG Strix B650-A Gaming WiFi AMD B650 AM5 Ryzen™ Desktop 9000 8000 & 7000 ATX motherboard, 12 + 2 power stages, DDR5, 3x M.2 slot, PCIe® 4.0, 2.5G LAN, WiFi 6E, USB 3.2 Gen 2x2 Type-C®, Aura Sync",
+    "GIGABYTE B850M AORUS Elite WIFI6E ICE AMD AM5 mATX Motherboard, Support AMD Ryzen 9000/8000/7000 Series, DDR5, 12+2+2 Power Phase, 2X M.2, PCIe 5.0, USB-C, WIFI6E, 2.5GbE, EZ-Latch, 5-Year Warranty"
+  ],
+  "psu": [
+    "MSI MAG A750GL PCIE5, Fully Modular Compact Gaming 750W Power Supply, 80+ Gold, ATX 3.1 & PCIe 5.1 Ready, Native Dual-Color 12V-2x6 Cable, 10 Year Warranty",
+    "CORSAIR RM850e (2025) ATX 3.1 PCIe 5.1 Ready 850W Power Supply – Black",
+    "CORSAIR RM1000e (2025) ATX 3.1 PCIe 5.1 Ready 1000W Power Supply – Black",
+    "Thermaltake Smart 500W 80+ White Certified PSU, Continuous Power with 120mm Ultra Quiet Cooling Fan, ATX 12V V2.3/EPS 12V Active PFC Power Supply PS-SPD-0500NPCWUS-W",
+    "ASRock PRO 750G Power Supply - 750W 80 Plus Gold Certified, ATX 3.1 & PCIe 5.1 Ready, Native 12V-2x6 Connector, 120mm Low-Noise Fan, 3-Year Warranty",
+    "MSI MAG A850GL PCIE5, Fully Modular Compact Gaming 850W Power Supply, 80+ Gold, ATX 3.1 & PCIe 5.1 Ready, Native Dual-Color 12V-2x6 Cable, 10 Year Warranty",
+    "Thermaltake SMART 600W ATX 12V V2.3/EPS 12V 80 Plus Certified Active PFC Power Supply PS-SPD-0600NPCWUS-W",
+    "Rosewill VMG 750W 80+ Gold, ATX 3.0 & 3.1 Compatible, Full Modular Low-Noise Power Supply, PCIe 5.1 12V-2x6 Connector, 100% Japanese Electrolytic Capacitor, 120mm FDB Silent Fan - 5 Year Warranty",
+    "Thermaltake GF1 Fully Modular ATX 850W Power Supply - 80 Plus Gold - Ultra Quiet - Zero RPM, PS-TPD-0850FNFAGU-P",
+    "1000W Fully Modular Power Supply, 80+ Gold PSU, ATX 3.1 & PCIe 5.1 Ready, Native Dual-Color 12V-2x6 Cable, RGB Low-Noise Smart Fan, 105°C-Rated Capacitors, Black"
+  ],
+  "pcCase": [
+    "Lian Li V100-ATX Mid-Tower PC Case-Black-V100RX",
+    "DARKROCK EC2 ATX Mid Tower Gaming Computer PC Case, Type-C Ready",
+    "CORSAIR 4000D RS ARGB Frame Customizable Mid-Tower PC Case – Black",
+    "NZXT H5 Flow - Compact ATX Mid-Tower PC Case - Black",
+    "MUSETEX Y6 PC Case, Pre-Installed 4 Non-LED Fans, ATX Mid Tower Case, Computer Case with Type-C, 270° Full View Tempered Glass, Black",
+    "MUSETEX ATX PC Case 7 PWM ARGB Fans Pre-Installed, Type-C Mid Tower Computer Case with Full-View Dual Tempered Glass, Gaming PC Case, Black(K2)",
+    "CORSAIR 3500X RS ARGB Panoramic Mid-Tower PC Case – Black",
+    "MUSETEX ATX PC Case Pre-Install 6 PWM ARGB Fans, Polygonal Mesh Computer Gaming Case, Opening Tempered Glass Side Panel Mid-Tower Case, USB 3.0 x 2, Black, NN8",
+    "FOIFKIN F600 PC Case - Pre-Installed 7 PWM ARGB Fan, ATX Mid-Tower Gaming PC Case, 270° Panoramic Glass with Type-C, FOIFKIN (Black, F600)",
+    "HYTE Y70 Touch Infinite Modern Aesthetic Gaming PC Case - Integrated 2.5K LCD Touchscreen Screen Display - Dual Chamber ATX Desktop Chassis - 10 Fan Capacity - Luxury PCIe 4.0 Riser Cable - Snow White"
+  ],
+  "cooling": [
+    "Thermalright Peerless Assassin 120 SE CPU Cooler, 6 Heat Pipes AGHP Technology, Dual 120mm PWM Fans, 1550RPM Speed, for AMD:AM4 AM5/Intel LGA 1700/1150/1151/1200/1851,PC Cooler",
+    "ARCTIC Liquid Freezer III Pro 360 A-RGB - AIO CPU Cooler, Water Cooling",
+    "ARCTIC Liquid Freezer III Pro 360 - AIO CPU Cooler,3 x 120 mm Water Cooling",
+    "Thermalright Assassin X120 Refined SE CPU Air Cooler, 4 Heat Pipes, TL-C12C PWM Fan, Aluminium Heatsink Cover, AGHP Technology, for AMD AM4/AM5/Intel LGA 1150/1151/1155/1200/1700/1851(AX120 R SE)",
+    "Thermalright Peerless Assassin 120 SE ARGB CPU Air Cooler,6 Heat Pipes CPU Cooler, Dual TL-C12C-S PWM Fan, Aluminium Heatsink Cover,AGHP Technology,for AMD AM4/AM5/Intel LGA1700/115X/1155/1200/1851",
+    "LIAN LI HydroShift II OLED Curved 360 TL Flex AIO Cooler-White-HS2OLDC36TW",
+    "be quiet! Pure Rock Pro 3 Black AMD and Intel Air CPU Cooler, 250W TDP",
+    "Thermalright Frozen Notte 360 Black ARGB V2 Water Cooling CPU Cooler, 360 Black CPU Cooler Specifications, 3×120mm PWM Fans, S-FDB Bearings, Suitable for AMD/AM4, Intel LGA 1700/1150/1151/1200",
+    "Thermalright Peerless Assassin 120 Vision MAX ARGB Black CPU Air Cooler, Twin Tower Radiator 2150RPM,480x854 Resolving Power IPS Screen with 5’’,Computer Cooler for Intel lga1851/1700/115x,AM4/AM5",
+    "Thermalright Peerless Assassin 120 Vision MAX ARGB White CPU Air Cooler, Twin Tower Radiator 2150RPM,480x854 Resolving Power IPS Screen with 5’’,Computer Cooler for Intel lga1851/1700/115x,AM4/AM5"
+  ]
+}

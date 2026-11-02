@@ -139,6 +139,92 @@ void main() {
     });
   });
 
+  group('RAM slots', () {
+    const slots = 'RAM slots';
+
+    test('a 4-module kit does not fit a Mini-ITX board', () {
+      expect(
+        _find(
+          _check({
+            ComponentType.ram: 'DDR5 64GB (4x16GB)',
+            ComponentType.motherboard: 'B650I Mini-ITX',
+          }),
+          slots,
+        ).status,
+        CompatibilityStatus.incompatible,
+      );
+    });
+
+    test('a 2-module kit fits', () {
+      expect(
+        _find(
+          _check({
+            ComponentType.ram: 'DDR5 32GB (2x16GB)',
+            ComponentType.motherboard: 'B650I Mini-ITX',
+          }),
+          slots,
+        ).status,
+        CompatibilityStatus.compatible,
+      );
+    });
+
+    test('unstated slots or modules are unknown', () {
+      expect(
+        _find(
+          _check({
+            ComponentType.ram: 'DDR5 32GB (2x16GB)',
+            ComponentType.motherboard: 'B650 ATX',
+          }),
+          slots,
+        ).status,
+        CompatibilityStatus.unknown,
+      );
+    });
+  });
+
+  group('cooler capacity', () {
+    const capacity = 'Cooler capacity';
+
+    test('rated below CPU peak is a warning, not a failure', () {
+      expect(
+        _find(
+          _check({
+            ComponentType.cooling: 'Air Cooler, 150W TDP',
+            ComponentType.cpu: 'Intel Core i9-14900K',
+          }),
+          capacity,
+        ).status,
+        CompatibilityStatus.warning,
+      );
+    });
+
+    test('rated above CPU peak is compatible', () {
+      expect(
+        _find(
+          _check({
+            ComponentType.cooling: 'Air Cooler, 250W TDP',
+            ComponentType.cpu: 'AMD Ryzen 7 7800X3D',
+          }),
+          capacity,
+        ).status,
+        CompatibilityStatus.compatible,
+      );
+    });
+
+    test('no rating is unknown', () {
+      expect(
+        _find(
+          _check({
+            ComponentType.cooling: 'Air Cooler',
+            ComponentType.cpu: 'AMD Ryzen 7 7800X3D',
+          }),
+          capacity,
+        ).status,
+        CompatibilityStatus.unknown,
+      );
+    });
+  });
+
   group('power', () {
     Map<ComponentType, String> build(String psu) => {
       ComponentType.cpu: 'Intel Core i9-14900K', // 253 W

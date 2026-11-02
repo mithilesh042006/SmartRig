@@ -12,7 +12,7 @@ void main() {
         'MSI GeForce RTX 4070 Ti 12GB': ('RTX 4070 TI', 285),
         'Gigabyte GeForce RTX™ 4070 SUPER 12G': ('RTX 4070 SUPER', 220),
         'ZOTAC RTX 4070 Ti SUPER 16GB': ('RTX 4070 TI SUPER', 285),
-        'PNY RTX4060Ti 8GB': ('RTX 4060 TI', 160),
+        'PNY RTX4060Ti 8GB': ('RTX 4060 TI', 165),
         'GeForce GTX 1660 Super': ('GTX 1660 SUPER', 125),
       };
       cases.forEach((title, expected) {
@@ -153,6 +153,72 @@ void main() {
         FormFactor.miniItx,
       );
       expect(resolver.motherboard('X670E E-ATX').formFactor, FormFactor.eAtx);
+    });
+  });
+
+  group('from real listings', () {
+    test('Core Ultra titles with the word Processor', () {
+      final cpu = resolver.cpu('Intel Core Ultra 9 Processor 285K, 24 cores');
+      expect(cpu.model, 'ULTRA 9 285K');
+      expect(cpu.socket, CpuSocket.lga1851);
+    });
+
+    test('RX 9070 GRE stays separate from the RX 9070', () {
+      expect(resolver.gpu('ASUS Radeon RX 9070 GRE 12GB').model, 'RX 9070 GRE');
+      expect(resolver.gpu('ASRock Radeon RX 9070 16GB').model, 'RX 9070');
+    });
+
+    test('mid towers count as ATX without saying so', () {
+      expect(
+        resolver.pcCase('CORSAIR 4000D Mid-Tower PC Case').maxFormFactor,
+        FormFactor.atx,
+      );
+    });
+
+    test('i3 13th and 14th gen use their 110 W maximum', () {
+      expect(resolver.cpu('Intel Core i3-13100').maxPowerW, 110);
+      expect(resolver.cpu('Intel Core i3-14100F').maxPowerW, 110);
+    });
+  });
+
+  group('measurements in titles', () {
+    test('RAM stick count', () {
+      expect(resolver.ram('32GB (2x16GB) DDR5').stickCount, 2);
+      expect(resolver.ram('32GB (2 x 16GB) DDR5').stickCount, 2);
+      expect(resolver.ram('64GB Kit 4X16GB DDR4').stickCount, 4);
+      expect(resolver.ram('16GB DDR4').stickCount, isNull);
+    });
+
+    test('motherboard slots', () {
+      expect(resolver.motherboard('B650I Mini-ITX').ramSlots, 2);
+      expect(resolver.motherboard('B650 ATX 4 DIMM').ramSlots, 4);
+      expect(resolver.motherboard('B650 ATX').ramSlots, isNull);
+    });
+
+    test('case clearances', () {
+      final pcCase = resolver.pcCase(
+        'ATX Case, GPU up to 360mm, CPU Cooler up to 165mm, 3x120mm Fans',
+      );
+      expect(pcCase.maxGpuLengthMm, 360);
+      expect(pcCase.maxCoolerHeightMm, 165);
+      expect(
+        resolver.pcCase('ATX Case with 120mm Fans').maxGpuLengthMm,
+        isNull,
+      );
+    });
+
+    test('GPU length and cooler height ignore fan sizes', () {
+      expect(resolver.gpu('RTX 4070 Length 285mm').lengthMm, 285);
+      expect(resolver.gpu('RTX 4070 with 100mm fans').lengthMm, isNull);
+      expect(resolver.cooler('Cooler Height 155mm').heightMm, 155);
+      expect(resolver.cooler('Cooler 158mm tall').heightMm, 158);
+      expect(resolver.cooler('Cooler with 120mm fan').heightMm, isNull);
+    });
+
+    test('cooler TDP rating', () {
+      expect(resolver.cooler('Air CPU Cooler, 250W TDP').ratedTdpW, 250);
+      expect(resolver.cooler('Cooler TDP up to 220W').ratedTdpW, 220);
+      expect(resolver.cooler('Cooler 3 x 120mm').ratedTdpW, isNull);
     });
   });
 

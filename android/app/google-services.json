@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "468877495126-ma80666lr9lup9tastj1n8onfs4aqmof.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.app.smartrig",
+            "certificate_hash": "1b7fadb9cb14336b8660abacab75728917c6fb6d"
+          }
+        },
+        {
           "client_id": "468877495126-o0grmmlqo5p3e1d7bdb27tt02hksqk2u.apps.googleusercontent.com",
           "client_type": 3
         }

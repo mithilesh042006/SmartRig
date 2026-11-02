@@ -33,7 +33,7 @@ class ModelResolver {
     }
 
     final ultra = RegExp(
-      r'\bULTRA ([579]) ?(\d{3})([A-Z]{0,2})\b',
+      r'\bULTRA ([579])(?: PROCESSOR)? ?(\d{3})([A-Z]{0,2})\b',
     ).firstMatch(text);
     if (ultra != null) {
       final number = ultra[2]!;
@@ -63,10 +63,8 @@ class ModelResolver {
   static CpuSpec _cpuSpec(String model, CpuSocket? socket) => CpuSpec(
     model: model,
     socket: socket,
-    // F variants only remove the integrated graphics.
     maxPowerW:
-        cpuMaxPowerW[model] ??
-        cpuMaxPowerW[model.replaceFirst(RegExp(r'F$'), '')],
+        cpuMaxPowerW[model] ?? cpuMaxPowerW[CpuSpec(model: model).baseModel],
   );
 
   static bool _isMobileSuffix(String suffix) =>
@@ -89,7 +87,14 @@ class ModelResolver {
   GpuSpec gpu(String title) {
     final text = _normalize(title);
     final model = _nvidiaModel(text) ?? _amdGpuModel(text) ?? _arcModel(text);
-    return GpuSpec(model: model, boardPowerW: gpuBoardPowerW[model]);
+    return GpuSpec(
+      model: model,
+      boardPowerW: gpuBoardPowerW[model],
+      lengthMm: _firstNumber(text, [
+        r'\bLENGTH (\d{3}) ?MM\b',
+        r'\b(\d{3}) ?MM (?:LONG|LENGTH)\b',
+      ]),
+    );
   }
 
   static String? _nvidiaModel(String text) {
@@ -147,11 +152,19 @@ class ModelResolver {
       memoryType = supported.length == 1 ? supported.first : null;
     }
 
+    final formFactor = _largestFormFactor(text);
+    final statedSlots = RegExp(r'\b(\d) ?(?:X )?DIMM').firstMatch(text)?[1];
+
     return MotherboardSpec(
       chipset: chipset,
       socket: socket,
       memoryType: memoryType,
-      formFactor: _largestFormFactor(text),
+      formFactor: formFactor,
+      ramSlots: statedSlots != null
+          ? int.parse(statedSlots)
+          : formFactor == FormFactor.miniItx
+          ? 2
+          : null,
       socketConflict: socketConflict,
       memoryConflict: hasDdr4 && hasDdr5,
     );
@@ -162,9 +175,15 @@ class ModelResolver {
     final hasDdr4 = RegExp(r'\bDDR4\b').hasMatch(text);
     final hasDdr5 = RegExp(r'\bDDR5\b').hasMatch(text);
     if (hasDdr4 && hasDdr5) return const RamSpec(conflict: true);
-    if (hasDdr4) return const RamSpec(memoryType: MemoryType.ddr4);
-    if (hasDdr5) return const RamSpec(memoryType: MemoryType.ddr5);
-    return const RamSpec();
+    final sticks = RegExp(r'\b(\d) ?X ?\d{1,3} ?GB\b').firstMatch(text)?[1];
+    return RamSpec(
+      memoryType: hasDdr4
+          ? MemoryType.ddr4
+          : hasDdr5
+          ? MemoryType.ddr5
+          : null,
+      stickCount: sticks == null ? null : int.parse(sticks),
+    );
   }
 
   PsuSpec psu(String title) {
@@ -177,11 +196,48 @@ class ModelResolver {
     return PsuSpec(wattage: values.length == 1 ? values.first : null);
   }
 
-  CaseSpec pcCase(String title) =>
-      CaseSpec(maxFormFactor: _largestFormFactor(_normalize(title)));
+  CaseSpec pcCase(String title) {
+    final text = _normalize(title);
+    return CaseSpec(
+      // Mid and full towers take ATX even when the title doesn't say so.
+      maxFormFactor:
+          _largestFormFactor(text) ??
+          (RegExp(r'\b(MID|FULL) ?TOWER\b').hasMatch(text)
+              ? FormFactor.atx
+              : null),
+      maxGpuLengthMm: _firstNumber(text, [
+        r'\b(?:GPU|VGA|GRAPHICS CARDS?)(?: [A-Z]+){0,4} (\d{3}) ?MM\b',
+      ]),
+      maxCoolerHeightMm: _firstNumber(text, [
+        r'\bCPU COOLER(?: [A-Z]+){0,4} (\d{3}) ?MM\b',
+      ]),
+    );
+  }
 
-  CoolerSpec cooler(String title) =>
-      CoolerSpec(sockets: _namedSockets(_normalize(title)));
+  CoolerSpec cooler(String title) {
+    final text = _normalize(title);
+    return CoolerSpec(
+      sockets: _namedSockets(text),
+      heightMm: _firstNumber(text, [
+        r'\bHEIGHT (\d{2,3}) ?MM\b',
+        r'\b(\d{2,3}) ?MM (?:HEIGHT|TALL|HIGH)\b',
+      ]),
+      ratedTdpW: _firstNumber(text, [
+        r'\b(\d{2,3}) ?W(?:ATTS?)? TDP\b',
+        r'\bTDP(?: UP TO)? (\d{2,3}) ?W',
+      ]),
+    );
+  }
+
+  /// First capture of the first pattern that matches, for measurements a title
+  /// only sometimes states.
+  static int? _firstNumber(String text, List<String> patterns) {
+    for (final pattern in patterns) {
+      final match = RegExp(pattern).firstMatch(text);
+      if (match != null) return int.parse(match[1]!);
+    }
+    return null;
+  }
 
   static Set<CpuSocket> _namedSockets(String text) => {
     if (RegExp(r'\bAM4\b').hasMatch(text)) CpuSocket.am4,

@@ -109,10 +109,12 @@ class CompatibilityService {
     return CompatibilityReport([
       if (cpu != null && board != null) _socket(cpu, board),
       if (ram != null && board != null) _memory(ram, board),
+      if (ram != null && board != null) _ramSlots(ram, board),
       if (cpu != null && gpu != null && psu != null) _power(cpu, gpu, psu),
       if (board != null && pcCase != null) _formFactor(board, pcCase),
       if (gpu != null && pcCase != null) _gpuLength(gpu, pcCase),
       if (cooler != null && cpu != null) _coolerSocket(cooler, cpu),
+      if (cooler != null && cpu != null) _coolerCapacity(cooler, cpu),
       if (cooler != null && pcCase != null) _coolerHeight(cooler, pcCase),
     ]);
   }
@@ -181,6 +183,32 @@ class CompatibilityService {
       CompatibilityStatus.compatible,
       'Both use ${ramType.label}. Speed and capacity limits are not checked.',
     );
+  }
+
+  CompatibilityCheck _ramSlots(RamSpec ram, MotherboardSpec board) {
+    const title = 'RAM slots';
+    final sticks = ram.stickCount;
+    final slots = board.ramSlots;
+    if (sticks == null || slots == null) {
+      return CompatibilityCheck(
+        title,
+        CompatibilityStatus.unknown,
+        sticks == null
+            ? 'The RAM listing does not say how many modules it includes.'
+            : 'The motherboard listing does not say how many memory slots it has.',
+      );
+    }
+    return sticks > slots
+        ? CompatibilityCheck(
+            title,
+            CompatibilityStatus.incompatible,
+            'This $sticks-module kit needs more slots than the motherboard\'s $slots.',
+          )
+        : CompatibilityCheck(
+            title,
+            CompatibilityStatus.compatible,
+            'The $sticks-module kit fits the motherboard\'s $slots slots.',
+          );
   }
 
   CompatibilityCheck _power(CpuSpec cpu, GpuSpec gpu, PsuSpec psu) {
@@ -302,6 +330,33 @@ class CompatibilityService {
             title,
             CompatibilityStatus.warning,
             'The cooler listing does not mention ${socket.label}. Confirm support before buying.',
+          );
+  }
+
+  CompatibilityCheck _coolerCapacity(CoolerSpec cooler, CpuSpec cpu) {
+    const title = 'Cooler capacity';
+    final rated = cooler.ratedTdpW;
+    final peak = cpu.maxPowerW;
+    if (rated == null || peak == null) {
+      return CompatibilityCheck(
+        title,
+        CompatibilityStatus.unknown,
+        rated == null
+            ? 'The cooler listing does not state a TDP rating.'
+            : 'No power data for this CPU model yet.',
+      );
+    }
+    // Ratings aren't standardized, and CPUs throttle safely, so never a failure.
+    return rated < peak
+        ? CompatibilityCheck(
+            title,
+            CompatibilityStatus.warning,
+            'The cooler is rated for $rated W, below the CPU\'s $peak W peak. The CPU may slow down under heavy load.',
+          )
+        : CompatibilityCheck(
+            title,
+            CompatibilityStatus.compatible,
+            'The cooler is rated for $rated W, above the CPU\'s $peak W peak.',
           );
   }
 

@@ -90,8 +90,15 @@ class ReviewBuildScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // FPS Predictions
-            _buildSectionTitle('Gaming FPS Predictions'),
+            _buildSectionTitle('Estimated Gaming FPS'),
             const SizedBox(height: 12),
+            if (result.isApproximate) ...[
+              Text(
+                _approximateMessage(result),
+                style: const TextStyle(color: Colors.orange),
+              ),
+              const SizedBox(height: 12),
+            ],
             _buildFpsChart(result),
             const SizedBox(height: 24),
 
@@ -127,7 +134,7 @@ class ReviewBuildScreen extends ConsumerWidget {
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Performance results are estimates and may vary based on cooling, drivers, workload, and system configuration.',
+                      'Scores and FPS are rough estimates from our own gaming index, not measured benchmarks. They assume high settings without upscaling or ray tracing. Real results vary by game, drivers, cooling and settings, so use them to compare builds.',
                       style: TextStyle(fontSize: 12, color: Colors.amber),
                     ),
                   ),
@@ -297,7 +304,7 @@ class ReviewBuildScreen extends ConsumerWidget {
   }
 
   Widget _buildSystemScoreCard(PerformanceResult result) {
-    final normalizedScore = (result.systemScore / 40000).clamp(0.0, 1.0);
+    final normalizedScore = (result.systemScore / 200).clamp(0.0, 1.0);
     final scoreLabel = _getScoreLabel(result.systemScore);
 
     return Card(
@@ -308,7 +315,7 @@ class ReviewBuildScreen extends ConsumerWidget {
           child: Column(
             children: [
               const Text(
-                'Overall System Score',
+                'Estimated System Score',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
@@ -488,6 +495,15 @@ class ReviewBuildScreen extends ConsumerWidget {
     );
   }
 
+  String _approximateMessage(PerformanceResult result) {
+    final part = !result.cpuInIndex && !result.gpuInIndex
+        ? 'this CPU and GPU'
+        : !result.cpuInIndex
+        ? 'this CPU'
+        : 'this GPU';
+    return 'We have no performance data for $part yet, so these numbers are especially approximate.';
+  }
+
   /// Highest FPS rounded up to the next 50, so no bar is clipped.
   double _chartMaxY(PerformanceResult result) {
     final highest = result.gameFps.values
@@ -629,21 +645,14 @@ class ReviewBuildScreen extends ConsumerWidget {
     );
   }
 
-  String _getScoreLabel(double score) {
-    if (score >= 35000) return 'Extreme';
-    if (score >= 28000) return 'Enthusiast';
-    if (score >= 20000) return 'High-End';
-    if (score >= 15000) return 'Mid-Range';
-    if (score >= 10000) return 'Entry';
-    return 'Budget';
-  }
+  String _getScoreLabel(double score) => ScoreTier.fromScore(score).label;
 
-  Color _getScoreColor(double score) {
-    if (score >= 35000) return Colors.purpleAccent;
-    if (score >= 28000) return Colors.blueAccent;
-    if (score >= 20000) return Colors.green;
-    if (score >= 15000) return Colors.amber;
-    if (score >= 10000) return Colors.orange;
-    return Colors.redAccent;
-  }
+  Color _getScoreColor(double score) => switch (ScoreTier.fromScore(score)) {
+    ScoreTier.extreme => Colors.purpleAccent,
+    ScoreTier.enthusiast => Colors.blueAccent,
+    ScoreTier.highEnd => Colors.green,
+    ScoreTier.midRange => Colors.amber,
+    ScoreTier.entry => Colors.orange,
+    ScoreTier.budget => Colors.redAccent,
+  };
 }

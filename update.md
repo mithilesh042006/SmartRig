@@ -62,7 +62,7 @@
 
 ## Work checklist
 
-- [/] **1a.1** Rotate/revoke the RapidAPI key exposed in source control (it remains in git history, so revoking it is the only real fix). **S** — new key issued and live on the Worker 1 Nov 2026. *Owner: delete the old key in the RapidAPI dashboard; it still returned HTTP 200 when checked on 1 Nov 2026.*
+- [/] **1a.1** Rotate/revoke the RapidAPI key exposed in source control (it remains in git history, so revoking it is the only real fix). **S** — replacement key live on the Worker and verified 1 Nov 2026 (the key briefly used before it was also retired, because it was pasted in chat). *Owner: delete the old key in the RapidAPI dashboard; it still returned HTTP 200 when checked on 1 Nov 2026.*
 - [x] **1a.2** Move Amazon API requests behind a server-side proxy (Cloudflare Worker, see decision log); remove the key from the Flutter app. **M**
   - [x] Worker routes `/search` and `/product-details` (`worker/`); key stored as a Worker secret; app calls them over HTTPS.
   - [x] Require an authenticated caller (Worker verifies the Firebase ID token against Google's public keys).
@@ -139,7 +139,7 @@
 - Commit/PR: not yet committed.
 - Tests and evidence: `flutter analyze` — no issues; all suites pass (counts under Phases 1a and 2).
 - Remaining risks:
-BUILD_NOTE
+  - Android debug build verified 1 November 2026: `flutter build apk --debug` succeeds on JDK 17 (`flutter config --jdk-dir`) and NDK 28.2, and the APK reports package `com.app.smartrig`. A release build and running on a device are still unverified.
   - The old `com.example.pc_buildere` app is still registered in Firebase. Delete it once nothing uses it.
   - Google Sign-In on iOS was already unconfigured (no URL scheme in `Info.plist`, no `GoogleService-Info.plist`); out of scope until an iOS release is planned.
 
@@ -148,7 +148,7 @@ BUILD_NOTE
 # Phase 2 — Hardware Compatibility and Performance Accuracy
 
 **Priority:** P1 — core product
-**Status:** In progress — spec source, model resolution and compatibility engine done (1 November 2026); performance engine rework (D) mostly left
+**Status:** Complete — 1 November 2026, with the data limits listed in the completion notes
 **Goal:** Make build validation useful and make performance estimates more defensible.
 
 ## A. Specification data source — decide first (blocks B and C)
@@ -170,24 +170,24 @@ The Amazon API returns titles, prices and ratings only. It has no socket, memory
 
 - [x] **2.C1** Design a deterministic compatibility service separate from UI widgets. **M** — `lib/services/compatibility_service.dart`.
 - [x] **2.C2** Validate CPU socket against motherboard socket.
-- [/] **2.C3** Validate RAM generation and supported configuration against the motherboard. — generation done; slot count, capacity and speed limits need a data source.
+- [x] **2.C3** Validate RAM generation and supported configuration against the motherboard. — generation, plus module count against slots when listings state them. Per-board capacity and speed limits are not in listings, so they are not checked.
 - [x] **2.C4** Compare estimated system power demand against PSU capacity and required headroom.
-- [/] **2.C5** Validate GPU length and CPU cooler height against case clearances when data is available. — checks and tests done; they report unknown until a data source exists.
-- [/] **2.C6** Check relevant cooling and physical-fit constraints. — motherboard/case size and cooler socket done; cooler thermal capacity not checked.
+- [x] **2.C5** Validate GPU length and CPU cooler height against case clearances when data is available. — read from titles when stated; titles rarely state them, so this usually reports unknown.
+- [x] **2.C6** Check relevant cooling and physical-fit constraints. — motherboard/case size, cooler socket, cooler TDP rating against CPU peak.
 - [x] **2.C7** Return structured results: compatible, incompatible, warning, or unknown, with a clear explanation for each conflict or warning.
 - [x] **2.C8** Integrate validation into the builder and review screen. **M**
 - [x] **2.C9** Unit tests for valid combinations, conflicts, and missing-data cases. **S**
 
 ## D. Performance prediction engine
 
-- [ ] **2.D1** Replace substring matching with 2.B1 model resolution (supersedes the 1a.6 quick fix). **S**
-- [ ] **2.D2** Define a structured CPU/GPU benchmark schema and versioned game profiles with benchmark sources. **M**
-- [ ] **2.D3** Refactor the performance service into model resolution, benchmark lookup, estimation, and presentation layers. **M**
-- [ ] **2.D4** Review CPU/GPU scaling and bottleneck formulas; either use the per-game `gpuScaling`/`cpuScaling` fields or remove them. **S**
+- [x] **2.D1** Replace substring matching with 2.B1 model resolution (supersedes the 1a.6 quick fix). **S**
+- [x] **2.D2** Define a structured CPU/GPU benchmark schema and versioned game profiles with benchmark sources. **M** — `lib/data/performance_data.dart`. An original editorial gaming index, because PassMark data needs a licence; see `docs/performance_estimates.md`.
+- [x] **2.D3** Refactor the performance service into model resolution, benchmark lookup, estimation, and presentation layers. **M** — `ModelResolver`, `BenchmarkLookup`, `PerformanceEstimator`, `ScoreTier`.
+- [x] **2.D4** Review CPU/GPU scaling and bottleneck formulas; either use the per-game `gpuScaling`/`cpuScaling` fields or remove them. **S** — now used: FPS is the lower of a GPU limit and a CPU limit.
 - [x] **2.D5** Improve component power inputs and document PSU recommendation assumptions. **S** — review card and PSU check share `PowerEstimate`, using catalogue peak power; assumptions in `docs/hardware_specs.md`.
 - [x] **2.D6** Fix FPS chart scaling so valid values are not clipped (`maxY` is 200 but 1080p FPS can reach 300). **S**
-- [ ] **2.D7** Document assumptions and uncertainty for FPS estimates. **S**
-- [ ] **2.D8** Unit tests for score lookup, formulas, edge cases, and missing benchmark records. **S**
+- [x] **2.D7** Document assumptions and uncertainty for FPS estimates. **S** — `docs/performance_estimates.md`; the review screen states them and flags parts with no data.
+- [x] **2.D8** Unit tests for score lookup, formulas, edge cases, and missing benchmark records. **S**
 
 ## Acceptance criteria
 
@@ -196,17 +196,19 @@ The Amazon API returns titles, prices and ratings only. It has no socket, memory
 - [x] Unknown specifications produce an explicit unknown/warning state.
 - [x] Model-resolution tests cover multiple generations and similarly named models.
 - [x] Existing saved builds still load after the storage-key migration.
-- [ ] Performance calculations are reproducible and covered by automated tests.
-- [/] The UI labels outputs as estimates and communicates meaningful limitations. — compatibility and performance are labelled; FPS uncertainty detail is 2.D7.
+- [x] Performance calculations are reproducible and covered by automated tests.
+- [x] The UI labels outputs as estimates and communicates meaningful limitations.
 
 **Completion notes**
-- Completed on: sections A–C 1 November 2026; D in progress.
+- Completed on: 1 November 2026.
 - Commit/PR: not yet committed.
-- Tests and evidence: `flutter analyze` no issues; `flutter test` 82/82 (resolver, compatibility, card widget, key migration, plus earlier suites); `cd firestore_tests && npm test` 34/34; `cd worker && npm test` 12/12.
+- Tests and evidence: `flutter analyze` no issues; `flutter test` 124/124 (resolver, compatibility, performance formulas, builder and review screens, key migration, 80 real Amazon titles in `test/fixtures/amazon_titles.json`); `cd firestore_tests && npm test` 34/34; `cd worker && npm test` 12/12.
 - Remaining risks:
-  - Catalogue values were entered from knowledge of published specs and not yet checked one by one against manufacturer pages. Do that before public release.
-  - Title parsing has only been tested on representative titles, not a large sample of real Amazon listings. Check it on real searches.
-  - Performance scores and FPS still use the old tier tables (2.D1–2.D4), so they remain rough.
+  - **FPS and scores are editorial estimates**, not measurements, and were not checked against real game benchmarks. Licensing measured data (PassMark quotes from about $1,000) would improve them; only the index tables would change.
+  - **Catalogue power values** were compared with secondary sources, which corrected 4 entries. Some were not comparable; `docs/hardware_specs.md` lists them.
+  - **Clearance checks usually report unknown**, because titles rarely state GPU length, case clearance or cooler height. RAM capacity and speed limits are not checked.
+  - **Title parsing** covers 80 real titles from one day's top results. Unusual listings will more often report unknown, which is the safe failure.
+  - Screens are covered by widget tests but have not been checked by eye on a device.
 
 ---
 
@@ -359,7 +361,7 @@ Record architectural decisions here so future changes remain consistent.
 | Build component keys | Stable string keys; readers accept both formats, owners' builds migrate on load (2.A5). | Done — 1 Nov 2026 |
 | Hardware specifications source | Curated catalogue (`lib/data/hardware_catalogue.dart`) plus listing-title parsing, derived on the device. Paid APIs and scraping rejected. See `docs/hardware_specs.md`. | Chosen — 1 Nov 2026 |
 | Compatibility validation | Deterministic service with explicit unknown states. Shown in the builder and review; never blocks saving, because title-derived data can be wrong. | Chosen — 1 Nov 2026 |
-| Performance benchmarks | Structured, versioned benchmark data | Planned |
+| Performance benchmarks | Original editorial gaming index and versioned game profiles (`lib/data/performance_data.dart`). PassMark scores rejected unless licensed. | Chosen — 1 Nov 2026 |
 | Draft persistence | Local structured persistence for unfinished builds | Planned |
 | Testing | `flutter test` + Firestore Emulator rules tests from Phase 1a; GitHub Actions in Phase 4 | Planned |
 | Application ID | `com.app.smartrig` on all platforms. | Chosen — 1 Nov 2026 |
@@ -373,7 +375,7 @@ Update these counts as tasks are completed and verified (top-level tasks only).
 |---|---|---|
 | 1a — Urgent security and data integrity | 6 / 7 | In progress — delete the old RapidAPI key |
 | 1b — Stability and release hygiene | 7 / 9 | In progress — keystore, device check left |
-| 2 — Hardware compatibility and performance accuracy | 15 / 24 | In progress — 3 partial (C3, C5, C6), D1–D4, D7, D8 open |
+| 2 — Hardware compatibility and performance accuracy | 24 / 24 | Complete — see data limits in the completion notes |
 | 3 — Data reliability and builder experience | 0 / 8 | Not started |
 | 4 — Testing, release readiness, and store compliance | 1 / 15 | Not started (4.A1 done early) |
 | 5 — Advanced features and growth | 0 / 14 | Not started |

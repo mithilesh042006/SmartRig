@@ -3,7 +3,7 @@
 // process is in docs/hardware_specs.md.
 import '../models/hardware_spec.dart';
 
-const catalogueVersion = '2026.11.1';
+const catalogueVersion = '2026.11.3';
 
 /// Peak package power in watts (Intel MTP / AMD PPT). "F" variants share the
 /// entry of the same model without integrated graphics.
@@ -16,7 +16,7 @@ const Map<String, int> cpuMaxPowerW = {
   'I7 12700K': 190,
   'I9 12900K': 241,
   // Intel 13th gen
-  'I3 13100': 89,
+  'I3 13100': 110,
   'I5 13400': 148,
   'I5 13600K': 181,
   'I7 13700': 219,
@@ -24,7 +24,7 @@ const Map<String, int> cpuMaxPowerW = {
   'I9 13900': 219,
   'I9 13900K': 253,
   // Intel 14th gen
-  'I3 14100': 89,
+  'I3 14100': 110,
   'I5 14400': 148,
   'I5 14600K': 181,
   'I7 14700': 219,
@@ -58,11 +58,14 @@ const Map<String, int> cpuMaxPowerW = {
   'RYZEN 7 9700X': 88,
   'RYZEN 7 9800X3D': 162,
   'RYZEN 9 9900X': 162,
+  'RYZEN 9 9900X3D': 162,
   'RYZEN 9 9950X': 200,
+  'RYZEN 9 9950X3D': 200,
 };
 
 /// Reference total board power in watts. Factory-overclocked cards can draw
-/// somewhat more.
+/// somewhat more. Where a model has several versions, this is the highest, so
+/// PSU advice errs on the safe side.
 const Map<String, int> gpuBoardPowerW = {
   // NVIDIA
   'RTX 5090': 575,
@@ -78,7 +81,7 @@ const Map<String, int> gpuBoardPowerW = {
   'RTX 4070 TI': 285,
   'RTX 4070 SUPER': 220,
   'RTX 4070': 200,
-  'RTX 4060 TI': 160,
+  'RTX 4060 TI': 165,
   'RTX 4060': 115,
   'RTX 3090 TI': 450,
   'RTX 3090': 350,
@@ -96,6 +99,7 @@ const Map<String, int> gpuBoardPowerW = {
   // AMD
   'RX 9070 XT': 304,
   'RX 9070': 220,
+  'RX 9070 GRE': 220,
   'RX 9060 XT': 160,
   'RX 7900 XTX': 355,
   'RX 7900 XT': 315,
@@ -109,14 +113,14 @@ const Map<String, int> gpuBoardPowerW = {
   'RX 6800': 250,
   'RX 6750 XT': 250,
   'RX 6700 XT': 230,
-  'RX 6650 XT': 176,
+  'RX 6650 XT': 180,
   'RX 6600': 132,
   // Intel
   'ARC B580': 190,
   'ARC B570': 150,
   'ARC A770': 225,
   'ARC A750': 225,
-  'ARC A580': 185,
+  'ARC A580': 175,
   'ARC A380': 75,
 };
 

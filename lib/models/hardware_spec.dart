@@ -39,6 +39,9 @@ class CpuSpec {
   final int? maxPowerW;
 
   const CpuSpec({this.model, this.socket, this.maxPowerW});
+
+  /// The model without a trailing "F", which only removes integrated graphics.
+  String? get baseModel => model?.replaceFirst(RegExp(r'F$'), '');
 }
 
 class GpuSpec {
@@ -55,6 +58,9 @@ class MotherboardSpec {
   final MemoryType? memoryType;
   final FormFactor? formFactor;
 
+  /// Memory slots, from the title or a size that fixes the count (Mini-ITX).
+  final int? ramSlots;
+
   /// The listing's chipset and stated socket disagree.
   final bool socketConflict;
 
@@ -66,6 +72,7 @@ class MotherboardSpec {
     this.socket,
     this.memoryType,
     this.formFactor,
+    this.ramSlots,
     this.socketConflict = false,
     this.memoryConflict = false,
   });
@@ -74,10 +81,13 @@ class MotherboardSpec {
 class RamSpec {
   final MemoryType? memoryType;
 
+  /// Modules in the kit, from a title like "32GB (2x16GB)".
+  final int? stickCount;
+
   /// The listing names both memory generations.
   final bool conflict;
 
-  const RamSpec({this.memoryType, this.conflict = false});
+  const RamSpec({this.memoryType, this.stickCount, this.conflict = false});
 }
 
 class PsuSpec {
@@ -103,5 +113,8 @@ class CoolerSpec {
   final Set<CpuSocket> sockets;
   final int? heightMm;
 
-  const CoolerSpec({this.sockets = const {}, this.heightMm});
+  /// Heat the cooler is rated for, in watts.
+  final int? ratedTdpW;
+
+  const CoolerSpec({this.sockets = const {}, this.heightMm, this.ratedTdpW});
 }

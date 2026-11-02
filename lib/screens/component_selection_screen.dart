@@ -143,9 +143,7 @@ class _ComponentSelectionScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Select ${widget.componentType.label}'),
-      ),
+      appBar: AppBar(title: Text('Select ${widget.componentType.label}')),
       body: Column(
         children: [
           // Selection area
