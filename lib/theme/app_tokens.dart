@@ -11,14 +11,14 @@ abstract final class Space {
   static const double section = 32;
 
   /// Horizontal padding of every screen.
-  static const double screen = 20;
+  static const double screen = 16;
 }
 
 abstract final class Radii {
-  static const double sm = 10;
-  static const double md = 14;
-  static const double lg = 20;
-  static const double xl = 28;
+  static const double sm = 12;
+  static const double md = 18;
+  static const double lg = 26;
+  static const double xl = 34;
   static const double pill = 999;
 }
 
@@ -32,6 +32,19 @@ abstract final class Motion {
       MediaQuery.disableAnimationsOf(context) ? Duration.zero : duration;
 }
 
+/// Bright blocks used in both themes. Ink text is readable on all of them.
+abstract final class RigPalette {
+  static const volt = Color(0xFFC8F135);
+  static const tangerine = Color(0xFFFF9A5C);
+  static const sun = Color(0xFFFFD84D);
+  static const mint = Color(0xFF8FE3B8);
+  static const sky = Color(0xFF9CD4FF);
+  static const lilac = Color(0xFFCDBBFF);
+  static const blush = Color(0xFFFFB9C6);
+  static const ice = Color(0xFFB8F0EC);
+  static const ink = Color(0xFF12140D);
+}
+
 /// SmartRig's colour tokens. Screens read these through `context.rig` instead
 /// of naming colours, so every widget follows the selected theme.
 class RigColors extends ThemeExtension<RigColors> {
@@ -41,19 +54,18 @@ class RigColors extends ThemeExtension<RigColors> {
   final Color border;
   final Color textPrimary;
   final Color textSecondary;
+
+  /// Emphasis on data, such as prices. Readable as text on surfaces.
   final Color accent;
   final Color accentAlt;
   final Color onAccent;
+
+  /// The main action colour: primary buttons and active states.
+  final Color volt;
+  final Color onVolt;
   final Color success;
   final Color warning;
   final Color error;
-
-  /// The hero and authentication panels stay deep in both themes.
-  final Color heroStart;
-  final Color heroEnd;
-  final Color onHero;
-  final Color onHeroMuted;
-  final Color viewerBackground;
 
   const RigColors({
     required this.background,
@@ -65,64 +77,49 @@ class RigColors extends ThemeExtension<RigColors> {
     required this.accent,
     required this.accentAlt,
     required this.onAccent,
+    required this.volt,
+    required this.onVolt,
     required this.success,
     required this.warning,
     required this.error,
-    required this.heroStart,
-    required this.heroEnd,
-    required this.onHero,
-    required this.onHeroMuted,
-    required this.viewerBackground,
   });
 
   static const light = RigColors(
-    background: Color(0xFFF5F7FB),
-    surface: Color(0xFFFFFFFF),
-    surfaceRaised: Color(0xFFEDF1F7),
-    border: Color(0xFFDDE3EC),
-    textPrimary: Color(0xFF151923),
-    textSecondary: Color(0xFF5F697B),
-    accent: Color(0xFF4460F6),
-    accentAlt: Color(0xFF7C4DEE),
+    background: Color(0xFFEFEBE2),
+    surface: Color(0xFFFFFEFA),
+    surfaceRaised: Color(0xFFE5E0D4),
+    border: Color(0xFFD9D3C5),
+    textPrimary: RigPalette.ink,
+    textSecondary: Color(0xFF5E5F54),
+    accent: Color(0xFFB3420A),
+    accentAlt: Color(0xFF6F3BD8),
     onAccent: Color(0xFFFFFFFF),
-    success: Color(0xFF0B8457),
-    warning: Color(0xFFAD5A00),
-    error: Color(0xFFD12C3A),
-    heroStart: Color(0xFF12162B),
-    heroEnd: Color(0xFF2B2A78),
-    onHero: Color(0xFFFFFFFF),
-    onHeroMuted: Color(0xFFC3C9E6),
-    viewerBackground: Color(0xFFE7EBF3),
+    volt: RigPalette.volt,
+    onVolt: RigPalette.ink,
+    success: Color(0xFF12763F),
+    warning: Color(0xFF8F5400),
+    error: Color(0xFFC92A3A),
   );
 
   static const dark = RigColors(
-    background: Color(0xFF0B0D12),
-    surface: Color(0xFF141821),
-    surfaceRaised: Color(0xFF1B2130),
-    border: Color(0xFF2A3244),
-    textPrimary: Color(0xFFF4F6FB),
-    textSecondary: Color(0xFF9AA4B5),
-    accent: Color(0xFF6D83FF),
-    accentAlt: Color(0xFFA78BFA),
-    onAccent: Color(0xFF080A12),
-    success: Color(0xFF3DD68C),
-    warning: Color(0xFFF5B544),
-    error: Color(0xFFFF6B72),
-    heroStart: Color(0xFF171C3A),
-    heroEnd: Color(0xFF322B85),
-    onHero: Color(0xFFFFFFFF),
-    onHeroMuted: Color(0xFFC3C9E6),
-    viewerBackground: Color(0xFF10131B),
+    background: Color(0xFF0A0B08),
+    surface: Color(0xFF171914),
+    surfaceRaised: Color(0xFF24271F),
+    border: Color(0xFF32362C),
+    textPrimary: Color(0xFFF6F8ED),
+    textSecondary: Color(0xFFABB09F),
+    accent: RigPalette.tangerine,
+    accentAlt: Color(0xFFB79CFF),
+    onAccent: RigPalette.ink,
+    volt: RigPalette.volt,
+    onVolt: RigPalette.ink,
+    success: Color(0xFF5FDC8C),
+    warning: Color(0xFFFFC24D),
+    error: Color(0xFFFF7A7A),
   );
 
-  /// A pale tint of [color], for pills and icon backgrounds.
-  Color soft(Color color) => color.withValues(alpha: 0.14);
-
-  LinearGradient get heroGradient => LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [heroStart, heroEnd],
-  );
+  /// A pale tint of [color], for pills and quiet backgrounds.
+  Color soft(Color color) => color.withValues(alpha: 0.16);
 
   @override
   RigColors copyWith() => this;
@@ -141,14 +138,11 @@ class RigColors extends ThemeExtension<RigColors> {
       accent: mix(accent, other.accent),
       accentAlt: mix(accentAlt, other.accentAlt),
       onAccent: mix(onAccent, other.onAccent),
+      volt: mix(volt, other.volt),
+      onVolt: mix(onVolt, other.onVolt),
       success: mix(success, other.success),
       warning: mix(warning, other.warning),
       error: mix(error, other.error),
-      heroStart: mix(heroStart, other.heroStart),
-      heroEnd: mix(heroEnd, other.heroEnd),
-      onHero: mix(onHero, other.onHero),
-      onHeroMuted: mix(onHeroMuted, other.onHeroMuted),
-      viewerBackground: mix(viewerBackground, other.viewerBackground),
     );
   }
 }
@@ -165,11 +159,11 @@ extension RigContext on BuildContext {
   TextTheme get text => Theme.of(this).textTheme;
 
   /// Bold figures with aligned digits, for scores, prices and FPS.
-  TextStyle metric(double size, {Color? color}) => TextStyle(
+  TextStyle metric(double size, {Color? color}) => text.displaySmall!.copyWith(
     fontSize: size,
-    fontWeight: FontWeight.w800,
-    letterSpacing: size >= 24 ? -0.8 : -0.2,
-    height: 1.18,
+    fontWeight: FontWeight.w700,
+    letterSpacing: size >= 24 ? -1 : -0.2,
+    height: 1.12,
     color: color ?? rig.textPrimary,
     fontFeatures: const [FontFeature.tabularFigures()],
   );

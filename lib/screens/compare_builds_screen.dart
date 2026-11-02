@@ -63,10 +63,10 @@ class _CompareBuildsScreenState extends ConsumerState<CompareBuildsScreen> {
           }
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(
-              Space.screen,
+              Space.lg,
               Space.sm,
-              Space.screen,
-              Space.xl,
+              Space.lg,
+              Space.lg,
             ),
             itemCount: builds.length + 1,
             separatorBuilder: (_, _) => const SizedBox(height: Space.md),
@@ -147,12 +147,15 @@ class _CompareBuildsScreenState extends ConsumerState<CompareBuildsScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    for (final build in builds)
+                    for (final (index, build) in builds.indexed)
                       Padding(
                         padding: const EdgeInsets.only(right: Space.md),
                         child: SizedBox(
                           width: 270,
-                          child: _ComparisonCard(savedBuild: build),
+                          child: _ComparisonCard(
+                            savedBuild: build,
+                            color: _bandColors[index % _bandColors.length],
+                          ),
                         ),
                       ),
                   ],
@@ -165,6 +168,8 @@ class _CompareBuildsScreenState extends ConsumerState<CompareBuildsScreen> {
     );
   }
 }
+
+const _bandColors = [RigPalette.volt, RigPalette.tangerine, RigPalette.lilac];
 
 class _SelectableBuildCard extends StatelessWidget {
   final SavedBuild savedBuild;
@@ -198,7 +203,7 @@ class _SelectableBuildCard extends StatelessWidget {
                     savedBuild.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.text.titleSmall,
+                    style: context.text.titleMedium,
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -224,63 +229,83 @@ class _SelectableBuildCard extends StatelessWidget {
 
 class _ComparisonCard extends StatelessWidget {
   final SavedBuild savedBuild;
+  final Color color;
 
-  const _ComparisonCard({required this.savedBuild});
+  const _ComparisonCard({required this.savedBuild, required this.color});
 
   @override
   Widget build(BuildContext context) {
     final result = performanceOf(savedBuild);
 
     return RigCard(
+      padding: EdgeInsets.zero,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            savedBuild.name,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: context.text.titleMedium,
-          ),
-          const SizedBox(height: Space.xs),
-          Text(
-            formatMoney(savedBuild.totalPrice),
-            style: context.metric(24, color: context.rig.accent),
-          ),
-          const SizedBox(height: Space.md),
-          if (result == null)
-            Text(
-              'Add a CPU and GPU to this build for performance estimates.',
-              style: context.text.bodySmall,
-            )
-          else
-            _Metrics(result: result),
-          const SizedBox(height: Space.md),
-          const Divider(),
-          const SizedBox(height: Space.md),
-          Text('Parts', style: context.text.titleSmall),
-          const SizedBox(height: Space.sm),
-          for (final entry in savedBuild.components.entries)
-            Padding(
-              padding: const EdgeInsets.only(bottom: Space.xs + 2),
-              child: Row(
-                children: [
-                  Icon(
-                    entry.key.icon,
-                    size: 16,
-                    color: context.rig.textSecondary,
+          Container(
+            color: color,
+            padding: const EdgeInsets.all(Space.lg + 2),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  savedBuild.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.text.titleLarge!.copyWith(
+                    color: RigPalette.ink,
                   ),
-                  const SizedBox(width: Space.sm),
-                  Expanded(
-                    child: Text(
-                      entry.value.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.text.bodySmall,
+                ),
+                const SizedBox(height: Space.sm),
+                Text(
+                  formatMoney(savedBuild.totalPrice),
+                  style: context.metric(30, color: RigPalette.ink),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(Space.lg + 2),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (result == null)
+                  Text(
+                    'Add a CPU and GPU to this build for performance estimates.',
+                    style: context.text.bodySmall,
+                  )
+                else
+                  _Metrics(result: result),
+                const SizedBox(height: Space.md),
+                const Divider(),
+                const SizedBox(height: Space.md),
+                Text('Parts', style: context.text.titleSmall),
+                const SizedBox(height: Space.sm),
+                for (final entry in savedBuild.components.entries)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: Space.xs + 2),
+                    child: Row(
+                      children: [
+                        Icon(
+                          entry.key.icon,
+                          size: 16,
+                          color: context.rig.textSecondary,
+                        ),
+                        const SizedBox(width: Space.sm),
+                        Expanded(
+                          child: Text(
+                            entry.value.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.text.bodySmall,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
+          ),
         ],
       ),
     );

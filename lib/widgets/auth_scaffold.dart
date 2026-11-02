@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_tokens.dart';
+import 'rig_art.dart';
 import 'rig_surfaces.dart';
 
 /// Shared layout for sign-in and registration: a branded header over the form.
@@ -19,7 +20,6 @@ class AuthScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.rig;
     return Scaffold(
       body: SingleChildScrollView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -28,18 +28,19 @@ class AuthScaffold extends StatelessWidget {
           children: [
             Container(
               clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                gradient: c.heroGradient,
-                borderRadius: const BorderRadius.vertical(
+              decoration: const BoxDecoration(
+                color: RigPalette.volt,
+                borderRadius: BorderRadius.vertical(
                   bottom: Radius.circular(Radii.xl),
                 ),
               ),
               child: Stack(
                 children: [
-                  Positioned.fill(
-                    child: CircuitPattern(
-                      color: c.onHero.withValues(alpha: 0.16),
-                    ),
+                  const Positioned(
+                    right: -Space.lg,
+                    bottom: -Space.xxl,
+                    width: 148,
+                    child: RigTowerArt(),
                   ),
                   SafeArea(
                     bottom: false,
@@ -58,7 +59,7 @@ class AuthScaffold extends StatelessWidget {
                               padding: const EdgeInsets.only(bottom: Space.sm),
                               child: IconButton(
                                 tooltip: 'Back',
-                                color: c.onHero,
+                                color: RigPalette.ink,
                                 padding: EdgeInsets.zero,
                                 alignment: Alignment.centerLeft,
                                 icon: const Icon(Icons.arrow_back),
@@ -72,23 +73,29 @@ class AuthScaffold extends StatelessWidget {
                               Text(
                                 'SmartRig',
                                 style: context.text.titleMedium!.copyWith(
-                                  color: c.onHero,
+                                  color: RigPalette.ink,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: Space.xl),
-                          Text(
-                            title,
-                            style: context.text.displaySmall!.copyWith(
-                              color: c.onHero,
+                          const SizedBox(height: Space.section),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 96),
+                            child: Text(
+                              title,
+                              style: context.text.displayMedium!.copyWith(
+                                color: RigPalette.ink,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: Space.sm),
-                          Text(
-                            subtitle,
-                            style: context.text.bodyMedium!.copyWith(
-                              color: c.onHeroMuted,
+                          const SizedBox(height: Space.md),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 112),
+                            child: Text(
+                              subtitle,
+                              style: context.text.bodyMedium!.copyWith(
+                                color: RigPalette.ink,
+                              ),
                             ),
                           ),
                         ],

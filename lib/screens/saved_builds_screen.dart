@@ -43,10 +43,10 @@ class SavedBuildsScreen extends ConsumerWidget {
 
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(
-              Space.screen,
+              Space.lg,
               Space.sm,
-              Space.screen,
-              Space.xl,
+              Space.lg,
+              Space.lg,
             ),
             itemCount: builds.length,
             separatorBuilder: (_, _) => const SizedBox(height: Space.md),
@@ -97,10 +97,10 @@ class _SavedBuildCard extends ConsumerWidget {
       button: true,
       child: RigCard(
         padding: const EdgeInsets.fromLTRB(
-          Space.lg,
-          Space.sm,
+          Space.xl,
+          Space.md,
           Space.xs,
-          Space.lg,
+          Space.xl,
         ),
         onTap: () => openSavedBuild(context, ref, savedBuild),
         child: Column(
@@ -113,7 +113,7 @@ class _SavedBuildCard extends ConsumerWidget {
                     savedBuild.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: context.text.titleMedium,
+                    style: context.text.headlineSmall,
                   ),
                 ),
                 IconButton(
@@ -125,16 +125,18 @@ class _SavedBuildCard extends ConsumerWidget {
               ],
             ),
             Padding(
-              padding: const EdgeInsets.only(right: Space.md),
+              padding: const EdgeInsets.only(right: Space.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     formatMoney(savedBuild.totalPrice),
-                    style: context.metric(24),
+                    style: context.metric(34, color: c.accent),
                   ),
                   const SizedBox(height: Space.xs),
                   BuildHighlights(components: savedBuild.components),
+                  const SizedBox(height: Space.lg),
+                  PartStrip(components: savedBuild.components),
                   const SizedBox(height: Space.md),
                   Wrap(
                     spacing: Space.xs + 2,

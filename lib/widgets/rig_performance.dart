@@ -10,7 +10,7 @@ Color scoreColor(BuildContext context, double score) {
   final c = context.rig;
   return switch (ScoreTier.fromScore(score)) {
     ScoreTier.extreme => c.accentAlt,
-    ScoreTier.enthusiast => c.accent,
+    ScoreTier.enthusiast => c.success,
     ScoreTier.highEnd => c.success,
     ScoreTier.midRange => c.warning,
     ScoreTier.entry => c.warning,
@@ -18,37 +18,35 @@ Color scoreColor(BuildContext context, double score) {
   };
 }
 
-/// An animated open-bottomed arc. [progress] runs from 0 to 1.
+/// An animated arc of chunky blocks. [progress] runs from 0 to 1.
 class RigGauge extends StatelessWidget {
   final double progress;
   final Color color;
   final double size;
-  final double strokeWidth;
+  final int segments;
   final Widget? child;
   final String semanticLabel;
-
-  /// Sweep in radians; a full circle is used for compact progress rings.
-  final double sweep;
 
   const RigGauge({
     super.key,
     required this.progress,
     required this.color,
     required this.semanticLabel,
-    this.size = 180,
-    this.strokeWidth = 14,
+    this.size = 260,
+    this.segments = 16,
     this.child,
-    this.sweep = math.pi * 1.5,
   });
 
   @override
   Widget build(BuildContext context) {
     final track = context.rig.surfaceRaised;
+    final block = _GaugePainter.blockDepth(size);
     return Semantics(
       label: semanticLabel,
       excludeSemantics: true,
-      child: SizedBox.square(
-        dimension: size,
+      child: SizedBox(
+        width: size,
+        height: size * 0.68,
         child: TweenAnimationBuilder<double>(
           tween: Tween(end: progress.clamp(0.0, 1.0)),
           duration: Motion.of(context, Motion.slow),
@@ -58,14 +56,18 @@ class RigGauge extends StatelessWidget {
               value: value,
               color: color,
               track: track,
-              strokeWidth: strokeWidth,
-              sweep: sweep,
+              segments: segments,
             ),
             child: child,
           ),
-          // Large text settings scale the label down rather than overflow the ring.
+          // Large text settings scale the label down rather than overflow.
           child: Padding(
-            padding: EdgeInsets.all(strokeWidth + Space.xs),
+            padding: EdgeInsets.fromLTRB(
+              block + Space.md,
+              block + Space.md,
+              block + Space.md,
+              0,
+            ),
             child: FittedBox(fit: BoxFit.scaleDown, child: child),
           ),
         ),
@@ -78,31 +80,49 @@ class _GaugePainter extends CustomPainter {
   final double value;
   final Color color;
   final Color track;
-  final double strokeWidth;
-  final double sweep;
+  final int segments;
+
+  /// 220 degrees, leaving the gap at the bottom.
+  static const _sweep = math.pi * 1.22;
+
+  static double blockDepth(double size) => size * 0.15;
 
   _GaugePainter({
     required this.value,
     required this.color,
     required this.track,
-    required this.strokeWidth,
-    required this.sweep,
+    required this.segments,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rect =
-        Offset(strokeWidth / 2, strokeWidth / 2) &
-        Size(size.width - strokeWidth, size.height - strokeWidth);
-    final start = math.pi / 2 + (math.pi * 2 - sweep) / 2;
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
+    final depth = blockDepth(size.width);
+    final radius = size.width / 2 - depth / 2;
+    final center = Offset(size.width / 2, size.width / 2);
+    final slot = _sweep / segments;
+    final thickness = math.max(radius * slot * 0.76, 2.0);
+    final start = -math.pi / 2 - _sweep / 2;
+    final filled = value * segments;
+    final paint = Paint();
 
-    canvas.drawArc(rect, start, sweep, false, paint..color = track);
-    if (value > 0) {
-      canvas.drawArc(rect, start, sweep * value, false, paint..color = color);
+    for (var i = 0; i < segments; i++) {
+      final amount = (filled - i).clamp(0.0, 1.0);
+      paint.color = Color.lerp(track, color, amount)!;
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      canvas.rotate(start + slot * (i + 0.5));
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset(radius, 0),
+            width: depth,
+            height: thickness,
+          ),
+          Radius.circular(thickness * 0.38),
+        ),
+        paint,
+      );
+      canvas.restore();
     }
   }
 
@@ -111,10 +131,10 @@ class _GaugePainter extends CustomPainter {
       old.value != value ||
       old.color != color ||
       old.track != track ||
-      old.sweep != sweep;
+      old.segments != segments;
 }
 
-/// Score card for the CPU or GPU.
+/// Score block for the CPU or GPU, filled with the part's colour.
 class ComponentScoreCard extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -133,21 +153,35 @@ class ComponentScoreCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tier = ScoreTier.fromScore(score).label;
     return RigCard(
+      color: color,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              RigIconBox(icon: icon, color: color, size: 36),
+              Icon(icon, color: RigPalette.ink, size: 20),
               const SizedBox(width: Space.sm),
-              Expanded(child: Text(label, style: context.text.titleSmall)),
+              Expanded(
+                child: Text(
+                  label,
+                  style: context.text.titleSmall!.copyWith(
+                    color: RigPalette.ink,
+                  ),
+                ),
+              ),
             ],
           ),
+          const SizedBox(height: Space.lg),
+          Text(
+            score.toStringAsFixed(0),
+            style: context.metric(42, color: RigPalette.ink),
+          ),
+          Text(
+            tier,
+            style: context.text.bodySmall!.copyWith(color: RigPalette.ink),
+          ),
           const SizedBox(height: Space.md),
-          Text(score.toStringAsFixed(0), style: context.metric(32)),
-          Text(tier, style: context.text.bodySmall),
-          const SizedBox(height: Space.md),
-          _Bar(progress: score / 200, color: color),
+          _Bar(progress: score / 200),
         ],
       ),
     );
@@ -156,9 +190,8 @@ class ComponentScoreCard extends StatelessWidget {
 
 class _Bar extends StatelessWidget {
   final double progress;
-  final Color color;
 
-  const _Bar({required this.progress, required this.color});
+  const _Bar({required this.progress});
 
   @override
   Widget build(BuildContext context) {
@@ -171,9 +204,9 @@ class _Bar extends StatelessWidget {
           borderRadius: BorderRadius.circular(Radii.pill),
           child: LinearProgressIndicator(
             value: value,
-            minHeight: 6,
-            color: color,
-            backgroundColor: context.rig.surfaceRaised,
+            minHeight: 8,
+            color: RigPalette.ink,
+            backgroundColor: RigPalette.ink.withValues(alpha: 0.16),
           ),
         ),
       ),
@@ -186,27 +219,33 @@ class MetricTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  final Color? color;
+
+  /// The block's fill.
+  final Color color;
 
   const MetricTile({
     super.key,
     required this.icon,
     required this.label,
     required this.value,
-    this.color,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     return RigCard(
+      color: color,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          RigIconBox(icon: icon, color: color, size: 36),
-          const SizedBox(height: Space.md),
-          Text(value, style: context.metric(24, color: color)),
+          Icon(icon, color: RigPalette.ink, size: 24),
+          const SizedBox(height: Space.lg),
+          Text(value, style: context.metric(28, color: RigPalette.ink)),
           const SizedBox(height: Space.xs),
-          Text(label, style: context.text.bodySmall),
+          Text(
+            label,
+            style: context.text.bodySmall!.copyWith(color: RigPalette.ink),
+          ),
         ],
       ),
     );
@@ -222,11 +261,10 @@ class _Resolution {
 }
 
 List<_Resolution> _resolutions(BuildContext context) {
-  final c = context.rig;
   return [
-    _Resolution('1080p', c.accent, (f) => f.fps1080p),
-    _Resolution('1440p', c.accentAlt, (f) => f.fps1440p),
-    _Resolution('4K', c.success, (f) => f.fps4k),
+    _Resolution('1080p', RigPalette.volt, (f) => f.fps1080p),
+    _Resolution('1440p', RigPalette.tangerine, (f) => f.fps1440p),
+    _Resolution('4K', RigPalette.lilac, (f) => f.fps4k),
   ];
 }
 
@@ -335,9 +373,9 @@ class FpsChart extends StatelessWidget {
                       BarChartRodData(
                         toY: resolution.read(games[i].value).toDouble(),
                         color: resolution.color,
-                        width: 8,
+                        width: 9,
                         borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(4),
+                          top: Radius.circular(5),
                         ),
                       ),
                   ],
@@ -366,11 +404,11 @@ class FpsLegend extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 10,
-                height: 10,
+                width: 12,
+                height: 12,
                 decoration: BoxDecoration(
                   color: resolution.color,
-                  borderRadius: BorderRadius.circular(3),
+                  shape: BoxShape.circle,
                 ),
               ),
               const SizedBox(width: Space.xs + 2),
@@ -451,7 +489,11 @@ class FpsTable extends StatelessWidget {
       c.warning,
       Icons.memory,
     ),
-    BottleneckType.gpu => ('GPU bottleneck ($percent%)', c.warning, Icons.tv),
+    BottleneckType.gpu => (
+      'GPU bottleneck ($percent%)',
+      c.warning,
+      Icons.videogame_asset,
+    ),
     BottleneckType.balanced => ('Balanced', c.success, Icons.check_circle),
   };
 }

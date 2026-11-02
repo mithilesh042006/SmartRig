@@ -40,9 +40,9 @@ class CommunityScreen extends ConsumerWidget {
 
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(
-              Space.screen,
+              Space.lg,
               Space.sm,
-              Space.screen,
+              Space.lg,
               Space.xl,
             ),
             itemCount: builds.length,
@@ -82,7 +82,7 @@ class _LikeButton extends ConsumerWidget {
     final liked = ref
         .watch(savedBuildsServiceProvider)
         .hasUserLiked(savedBuild);
-    final color = liked ? c.error : c.textSecondary;
+    final color = liked ? c.error : c.textPrimary;
     final count = savedBuild.likesCount;
 
     return Semantics(
@@ -165,20 +165,32 @@ class _CommunityBuildCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: Space.sm),
-              Text(
-                formatMoney(savedBuild.totalPrice, decimals: 0),
-                style: context.metric(18, color: context.rig.accent),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Space.md,
+                  vertical: Space.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: context.rig.volt,
+                  borderRadius: BorderRadius.circular(Radii.pill),
+                ),
+                child: Text(
+                  formatMoney(savedBuild.totalPrice, decimals: 0),
+                  style: context.metric(16, color: context.rig.onVolt),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: Space.md),
+          const SizedBox(height: Space.lg),
           Text(
             savedBuild.name,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: context.text.titleMedium,
+            style: context.text.headlineSmall,
           ),
           BuildHighlights(components: savedBuild.components),
+          const SizedBox(height: Space.lg),
+          PartStrip(components: savedBuild.components),
           const SizedBox(height: Space.md),
           Row(
             children: [
@@ -359,7 +371,7 @@ class _SheetHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(savedBuild.name, style: context.text.titleLarge),
+        Text(savedBuild.name, style: context.text.headlineMedium),
         const SizedBox(height: Space.xs),
         Text('by ${savedBuild.authorName}', style: context.text.bodySmall),
         const SizedBox(height: Space.md),
@@ -368,21 +380,21 @@ class _SheetHeader extends StatelessWidget {
             Expanded(
               child: Text(
                 formatMoney(savedBuild.totalPrice),
-                style: context.metric(24, color: c.accent),
+                style: context.metric(34, color: c.accent),
               ),
             ),
             _LikeButton(savedBuild: savedBuild),
           ],
         ),
         const SizedBox(height: Space.xl),
-        Text('Parts', style: context.text.titleSmall),
+        Text('Parts', style: context.text.titleLarge),
         const SizedBox(height: Space.sm),
         for (final entry in savedBuild.components.entries)
           Padding(
             padding: const EdgeInsets.only(bottom: Space.sm),
             child: Row(
               children: [
-                RigIconBox(icon: entry.key.icon, size: 34),
+                PartTile(type: entry.key, size: 40),
                 const SizedBox(width: Space.md),
                 Expanded(
                   child: Column(
@@ -411,7 +423,7 @@ class _SheetHeader extends StatelessWidget {
         const SizedBox(height: Space.md),
         const Divider(),
         const SizedBox(height: Space.lg),
-        Text('Comments', style: context.text.titleSmall),
+        Text('Comments', style: context.text.titleLarge),
         const SizedBox(height: Space.md),
       ],
     );
@@ -473,7 +485,7 @@ class _CommentInput extends StatelessWidget {
                       dimension: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Icon(Icons.send, color: c.accent),
+                  : Icon(Icons.send, color: c.textPrimary),
             ),
           ],
         ),

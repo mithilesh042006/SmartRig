@@ -74,6 +74,73 @@ class BuildHighlights extends StatelessWidget {
   }
 }
 
+/// A rounded tile in a part's colour, holding its icon.
+class PartTile extends StatelessWidget {
+  final ComponentType type;
+  final double size;
+
+  const PartTile({super.key, required this.type, this.size = 48});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * 0.32),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color.lerp(type.tint, Colors.white, 0.35)!, type.tint],
+        ),
+      ),
+      child: Icon(type.icon, color: RigPalette.ink, size: size * 0.5),
+    );
+  }
+}
+
+/// One block per slot, filled in the part's colour when the build has it.
+class PartStrip extends StatelessWidget {
+  final Map<ComponentType, Component> components;
+
+  const PartStrip({super.key, required this.components});
+
+  static const _order = [
+    ComponentType.cpu,
+    ComponentType.motherboard,
+    ComponentType.gpu,
+    ComponentType.ram,
+    ComponentType.storage,
+    ComponentType.psu,
+    ComponentType.pcCase,
+    ComponentType.cooling,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: Row(
+        children: [
+          for (final (index, type) in _order.indexed) ...[
+            if (index > 0) const SizedBox(width: 3),
+            Expanded(
+              child: Container(
+                height: 10,
+                decoration: BoxDecoration(
+                  color: components.containsKey(type)
+                      ? type.tint
+                      : context.rig.surfaceRaised,
+                  borderRadius: BorderRadius.circular(Radii.pill),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 /// Round avatar with a person's initials.
 class InitialsAvatar extends StatelessWidget {
   final String initials;
@@ -87,14 +154,22 @@ class InitialsAvatar extends StatelessWidget {
     this.imageUrl,
   });
 
+  static const _colors = [
+    RigPalette.volt,
+    RigPalette.tangerine,
+    RigPalette.sun,
+    RigPalette.mint,
+    RigPalette.sky,
+    RigPalette.lilac,
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final c = context.rig;
     final fallback = Center(
       child: Text(
         initials,
-        style: TextStyle(
-          color: c.accent,
+        style: context.text.titleSmall!.copyWith(
+          color: RigPalette.ink,
           fontWeight: FontWeight.w700,
           fontSize: size * 0.36,
         ),
@@ -105,7 +180,9 @@ class InitialsAvatar extends StatelessWidget {
       height: size,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: c.soft(c.accent),
+        color:
+            _colors[initials.codeUnits.fold(0, (a, b) => a + b) %
+                _colors.length],
         shape: BoxShape.circle,
       ),
       child: imageUrl == null
@@ -129,7 +206,7 @@ class PartThumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(Radii.sm),
+      borderRadius: BorderRadius.circular(size * 0.28),
       child: ProductImage(
         url: component.imageUrl,
         fallbackIcon: component.type.icon,

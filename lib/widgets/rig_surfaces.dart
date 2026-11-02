@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../theme/app_tokens.dart';
 
 enum RigCardTone { normal, selected, warning, error }
@@ -11,6 +12,9 @@ class RigCard extends StatefulWidget {
   final RigCardTone tone;
   final bool raised;
 
+  /// A solid fill, for colour-blocked cards. Text on it should be ink.
+  final Color? color;
+
   const RigCard({
     super.key,
     required this.child,
@@ -18,6 +22,7 @@ class RigCard extends StatefulWidget {
     this.onTap,
     this.tone = RigCardTone.normal,
     this.raised = false,
+    this.color,
   });
 
   @override
@@ -31,20 +36,22 @@ class _RigCardState extends State<RigCard> {
   Widget build(BuildContext context) {
     final c = context.rig;
     final borderColor = switch (widget.tone) {
-      RigCardTone.normal => c.border,
-      RigCardTone.selected => c.accent.withValues(alpha: 0.55),
-      RigCardTone.warning => c.warning.withValues(alpha: 0.55),
-      RigCardTone.error => c.error.withValues(alpha: 0.55),
+      RigCardTone.normal => Colors.transparent,
+      RigCardTone.selected => c.textPrimary,
+      RigCardTone.warning => c.warning,
+      RigCardTone.error => c.error,
     };
 
     return AnimatedScale(
-      scale: _pressed ? 0.985 : 1,
+      scale: _pressed ? 0.97 : 1,
       duration: Motion.of(context, Motion.fast),
       child: Material(
-        color: widget.raised ? c.surfaceRaised : c.surface,
+        color: widget.color ?? (widget.raised ? c.surfaceRaised : c.surface),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(Radii.lg),
-          side: BorderSide(color: borderColor),
+          side: widget.tone == RigCardTone.normal
+              ? BorderSide.none
+              : BorderSide(color: borderColor, width: 2),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -59,7 +66,7 @@ class _RigCardState extends State<RigCard> {
   }
 }
 
-/// A tinted square holding an icon, used to anchor cards and list rows.
+/// A solid rounded tile holding an icon, used to anchor cards and list rows.
 class RigIconBox extends StatelessWidget {
   final IconData icon;
   final Color? color;
@@ -69,15 +76,18 @@ class RigIconBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = color ?? context.rig.accent;
+    final fill = color ?? context.rig.volt;
+    final onFill = ThemeData.estimateBrightnessForColor(fill) == Brightness.dark
+        ? Colors.white
+        : RigPalette.ink;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: context.rig.soft(tint),
-        borderRadius: BorderRadius.circular(Radii.md),
+        color: fill,
+        borderRadius: BorderRadius.circular(size * 0.34),
       ),
-      child: Icon(icon, color: tint, size: size * 0.52),
+      child: Icon(icon, color: onFill, size: size * 0.52),
     );
   }
 }
@@ -114,7 +124,10 @@ class RigPill extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: context.text.labelSmall!.copyWith(color: tint),
+              style: context.text.labelMedium!.copyWith(
+                color: tint,
+                fontSize: 11.5,
+              ),
             ),
           ),
         ],
@@ -144,7 +157,7 @@ class SectionHeader extends StatelessWidget {
           Expanded(
             child: Semantics(
               header: true,
-              child: Text(title, style: context.text.titleLarge),
+              child: Text(title, style: context.text.headlineSmall),
             ),
           ),
           if (actionLabel != null)
@@ -175,7 +188,7 @@ class ContentWidth extends StatelessWidget {
   }
 }
 
-/// SmartRig's compact app mark.
+/// SmartRig's mark: four part-coloured blocks on ink.
 class RigMark extends StatelessWidget {
   final double size;
 
@@ -183,83 +196,119 @@ class RigMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.rig;
+    final gap = size * 0.09;
+    final block = (size - gap * 3) / 2;
+
+    Widget tile(Color color, {bool round = false}) => Container(
+      width: block,
+      height: block,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(block * (round ? 0.5 : 0.28)),
+      ),
+    );
+
     return Semantics(
       label: 'SmartRig',
       image: true,
       child: Container(
         width: size,
         height: size,
+        padding: EdgeInsets.all(gap),
         decoration: BoxDecoration(
+          color: RigPalette.ink,
           borderRadius: BorderRadius.circular(size * 0.3),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [RigColors.light.accent, RigColors.light.accentAlt],
-          ),
         ),
-        child: Icon(Icons.memory, color: c.onHero, size: size * 0.6),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                tile(RigPalette.volt),
+                tile(RigPalette.tangerine, round: true),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                tile(RigPalette.sun, round: true),
+                tile(RigPalette.mint),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Faint motherboard-style traces, drawn behind hero panels.
-class CircuitPattern extends StatelessWidget {
-  final Color color;
+/// Gives its content the dark tokens, for panels that stay ink in both themes.
+class RigInk extends StatelessWidget {
+  final Widget child;
 
-  const CircuitPattern({super.key, required this.color});
+  const RigInk({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return ExcludeSemantics(
-      child: CustomPaint(painter: _CircuitPainter(color), size: Size.infinite),
+    if (Theme.of(context).brightness == Brightness.dark) return child;
+    return Theme(data: AppTheme.ink, child: child);
+  }
+}
+
+/// A dark card with the dark tokens applied to its content.
+class RigInkCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final VoidCallback? onTap;
+
+  const RigInkCard({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(Space.xl),
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return RigInk(
+      child: RigCard(
+        color: RigPalette.ink,
+        padding: padding,
+        onTap: onTap,
+        child: child,
+      ),
     );
   }
 }
 
-class _CircuitPainter extends CustomPainter {
-  final Color color;
+/// A short fade and rise as a section appears. Skipped with reduced motion.
+class RigReveal extends StatelessWidget {
+  final int order;
+  final Widget child;
 
-  _CircuitPainter(this.color);
+  const RigReveal({super.key, this.order = 0, required this.child});
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final line = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4;
-    final pad = Paint()..color = color;
-
-    // Traces run in from the right edge and step down at 45 degrees.
-    void trace(double startY, double runX, double dropY, double endX) {
-      final x0 = size.width;
-      final x1 = size.width - runX;
-      final y1 = startY + dropY;
-      final x2 = x1 - dropY;
-      final x3 = size.width - endX;
-      canvas.drawPath(
-        Path()
-          ..moveTo(x0, startY)
-          ..lineTo(x1, startY)
-          ..lineTo(x2, y1)
-          ..lineTo(x3, y1),
-        line,
-      );
-      canvas.drawCircle(Offset(x3, y1), 3, pad);
-    }
-
-    final h = size.height;
-    trace(h * 0.08, 46, 22, 150);
-    trace(h * 0.2, 28, 30, 190);
-    trace(h * 0.34, 60, 18, 128);
-    trace(h * 0.5, 22, 34, 168);
-    trace(h * 0.68, 54, 20, 112);
-    trace(h * 0.82, 30, 16, 92);
+  Widget build(BuildContext context) {
+    final duration = Motion.of(
+      context,
+      Duration(milliseconds: 320 + order * 70),
+    );
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: duration,
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) => Opacity(
+        opacity: value,
+        child: Transform.translate(
+          offset: Offset(0, (1 - value) * 18),
+          child: child,
+        ),
+      ),
+      child: child,
+    );
   }
-
-  @override
-  bool shouldRepaint(_CircuitPainter oldDelegate) => oldDelegate.color != color;
 }
 
 /// Sticky bottom area for a screen's main actions.
@@ -271,19 +320,16 @@ class RigActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.rig;
-    return Container(
-      decoration: BoxDecoration(
-        color: c.surface,
-        border: Border(top: BorderSide(color: c.border)),
-      ),
+    return ColoredBox(
+      color: c.background,
       child: SafeArea(
         top: false,
         child: ContentWidth(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
-              Space.screen,
-              Space.md,
-              Space.screen,
+              Space.lg,
+              Space.sm,
+              Space.lg,
               Space.md,
             ),
             child: child,

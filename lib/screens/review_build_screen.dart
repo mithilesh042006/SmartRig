@@ -34,6 +34,7 @@ class ReviewBuildScreen extends ConsumerWidget {
     final result = ref.watch(performanceResultProvider);
     final buildState = ref.watch(buildProvider);
     final c = context.rig;
+    const gridGap = SizedBox(width: Space.sm + 2);
 
     if (result == null) {
       return Scaffold(
@@ -56,9 +57,9 @@ class ReviewBuildScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Performance Review')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(
-          Space.screen,
+          Space.lg,
           Space.sm,
-          Space.screen,
+          Space.lg,
           Space.xxl,
         ),
         child: ContentWidth(
@@ -77,16 +78,16 @@ class ReviewBuildScreen extends ConsumerWidget {
                         label: 'CPU',
                         icon: ComponentType.cpu.icon,
                         score: result.cpuScore,
-                        color: c.accent,
+                        color: ComponentType.cpu.tint,
                       ),
                     ),
-                    const SizedBox(width: Space.md),
+                    gridGap,
                     Expanded(
                       child: ComponentScoreCard(
                         label: 'GPU',
                         icon: ComponentType.gpu.icon,
                         score: result.gpuScore,
-                        color: c.accentAlt,
+                        color: ComponentType.gpu.tint,
                       ),
                     ),
                   ],
@@ -101,7 +102,7 @@ class ReviewBuildScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: Space.md),
               ],
-              RigCard(
+              RigInkCard(
                 child: Column(
                   children: [
                     const FpsLegend(),
@@ -123,16 +124,16 @@ class ReviewBuildScreen extends ConsumerWidget {
                         icon: Icons.bolt,
                         label: 'Estimated power draw',
                         value: '${result.totalPowerW} W',
-                        color: c.warning,
+                        color: RigPalette.sun,
                       ),
                     ),
-                    const SizedBox(width: Space.md),
+                    gridGap,
                     Expanded(
                       child: MetricTile(
-                        icon: Icons.power,
+                        icon: ComponentType.psu.icon,
                         label: 'Recommended PSU',
                         value: '${result.recommendedPsuW} W+',
-                        color: c.accent,
+                        color: ComponentType.psu.tint,
                       ),
                     ),
                   ],
@@ -356,38 +357,44 @@ class _ScoreCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final score = result.systemScore;
-    final color = scoreColor(context, score);
     final tier = ScoreTier.fromScore(score).label;
 
-    return RigCard(
-      padding: const EdgeInsets.all(Space.xxl),
-      child: Column(
-        children: [
-          Text('Estimated System Score', style: context.text.titleMedium),
-          const SizedBox(height: Space.xl),
-          RigGauge(
-            progress: score / 200,
-            color: color,
-            size: 184,
-            semanticLabel:
-                'Estimated system score ${score.toStringAsFixed(0)}, $tier',
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(score.toStringAsFixed(0), style: context.metric(46)),
-                Text(
-                  tier,
-                  style: context.text.labelLarge!.copyWith(color: color),
+    return RigInkCard(
+      padding: const EdgeInsets.all(Space.xl),
+      child: Builder(
+        builder: (context) {
+          final c = context.rig;
+          return Column(
+            children: [
+              Text(
+                'Estimated System Score',
+                textAlign: TextAlign.center,
+                style: context.text.titleMedium,
+              ),
+              const SizedBox(height: Space.lg),
+              RigGauge(
+                progress: score / 200,
+                color: c.volt,
+                semanticLabel:
+                    'Estimated system score ${score.toStringAsFixed(0)}, $tier',
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(score.toStringAsFixed(0), style: context.metric(56)),
+                    const SizedBox(height: Space.xs),
+                    RigPill(label: tier, color: c.volt),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Text(
-            'Our gaming index: 100 is about a Core i9-12900K with an RTX 3080.',
-            textAlign: TextAlign.center,
-            style: context.text.bodySmall,
-          ),
-        ],
+              ),
+              const SizedBox(height: Space.lg),
+              Text(
+                'Our gaming index: 100 is about a Core i9-12900K with an RTX 3080.',
+                textAlign: TextAlign.center,
+                style: context.text.bodySmall,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -405,7 +412,7 @@ class _BuildSummary extends StatelessWidget {
         .toList();
 
     return RigCard(
-      padding: const EdgeInsets.all(Space.md),
+      padding: const EdgeInsets.all(Space.lg),
       child: Column(
         children: [
           for (final entry in components)
@@ -447,7 +454,7 @@ class _BuildSummary extends StatelessWidget {
                 Expanded(child: Text('Total', style: context.text.titleSmall)),
                 Text(
                   formatMoney(state.totalPrice),
-                  style: context.metric(18, color: context.rig.accent),
+                  style: context.metric(22, color: context.rig.accent),
                 ),
               ],
             ),

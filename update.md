@@ -365,7 +365,7 @@ Record architectural decisions here so future changes remain consistent.
 | Draft persistence | Local structured persistence for unfinished builds | Planned |
 | Testing | `flutter test` + Firestore Emulator rules tests from Phase 1a; GitHub Actions in Phase 4 | Planned |
 | Application ID | `com.app.smartrig` on all platforms. | Chosen — 1 Nov 2026 |
-| Visual design | Shared tokens and widgets (`lib/theme/`, `lib/widgets/`) with separate light and dark palettes; WCAG AA contrast enforced by test. Inter loads through `google_fonts` at runtime. | Chosen — 2 Nov 2026 |
+| Visual design | Shared tokens and widgets (`lib/theme/`, `lib/widgets/`) with separate light and dark palettes ("Volt": lime and tangerine on ink and warm sand); WCAG AA contrast enforced by test. Space Grotesk and Inter load through `google_fonts` at runtime. | Chosen — 2 Nov 2026 |
 | Public release | Release signing, security and store review | Planned |
 
 ## Progress Summary

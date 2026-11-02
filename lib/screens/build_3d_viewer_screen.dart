@@ -6,6 +6,7 @@ import '../models/component_type_ui.dart';
 import '../providers/build_provider.dart';
 import '../theme/app_tokens.dart';
 import '../utils/formatters.dart';
+import '../widgets/rig_art.dart';
 import '../widgets/rig_feedback.dart';
 import '../widgets/rig_surfaces.dart';
 
@@ -16,7 +17,6 @@ class Build3DViewerScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final buildState = ref.watch(buildProvider);
     final modelPath = _getModelPath(buildState);
-    final c = context.rig;
 
     if (modelPath == null) {
       return Scaffold(
@@ -39,20 +39,22 @@ class Build3DViewerScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Space.screen),
+                padding: const EdgeInsets.symmetric(horizontal: Space.lg),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(Radii.xl),
-                  child: ModelViewer(
-                    src: modelPath,
-                    alt: 'Simplified 3D preview of your PC build',
-                    ar: false,
-                    autoRotate: true,
-                    autoRotateDelay: 2000,
-                    rotationPerSecond: '30deg',
-                    cameraControls: true,
-                    disableZoom: false,
-                    backgroundColor: c.viewerBackground,
-                    loading: Loading.eager,
+                  child: BlueprintGrid(
+                    child: ModelViewer(
+                      src: modelPath,
+                      alt: 'Simplified 3D preview of your PC build',
+                      ar: false,
+                      autoRotate: true,
+                      autoRotateDelay: 2000,
+                      rotationPerSecond: '30deg',
+                      cameraControls: true,
+                      disableZoom: false,
+                      backgroundColor: Colors.transparent,
+                      loading: Loading.eager,
+                    ),
                   ),
                 ),
               ),
@@ -112,74 +114,78 @@ class _InfoPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.rig;
     return ContentWidth(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
-          Space.screen,
+          Space.lg,
           Space.md,
-          Space.screen,
+          Space.lg,
           Space.lg,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '${state.selectedComponents.length} of '
-                    '${ComponentType.values.length} parts',
-                    style: context.text.titleSmall,
-                  ),
-                ),
-                Text(
-                  formatMoney(state.totalPrice),
-                  style: context.metric(16, color: c.accent),
-                ),
-              ],
-            ),
-            const SizedBox(height: Space.md),
-            Wrap(
-              spacing: Space.sm,
-              runSpacing: Space.sm,
-              children: [
-                for (final type in const [
-                  ComponentType.pcCase,
-                  ComponentType.motherboard,
-                  ComponentType.cpu,
-                  ComponentType.gpu,
-                  ComponentType.ram,
-                  ComponentType.psu,
-                  ComponentType.cooling,
-                ])
-                  Builder(
-                    builder: (context) {
-                      final selected = state.selectedComponents[type] != null;
-                      return Semantics(
-                        label:
-                            '${type.label} ${selected ? 'selected' : 'not selected'}',
-                        excludeSemantics: true,
-                        child: RigPill(
-                          label: type.shortLabel,
-                          icon: selected
-                              ? Icons.check_circle
-                              : Icons.radio_button_unchecked,
-                          color: selected ? c.success : c.textSecondary,
+        child: RigInkCard(
+          padding: const EdgeInsets.all(Space.lg + 2),
+          child: Builder(
+            builder: (context) {
+              final c = context.rig;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${state.selectedComponents.length} of '
+                          '${ComponentType.values.length} parts',
+                          style: context.text.titleMedium,
                         ),
-                      );
-                    },
+                      ),
+                      Text(
+                        formatMoney(state.totalPrice),
+                        style: context.metric(24, color: c.volt),
+                      ),
+                    ],
                   ),
-              ],
-            ),
-            const SizedBox(height: Space.md),
-            Text(
-              'Drag to rotate, pinch to zoom. This is a simplified preview of '
-              'your build stage, not your exact parts.',
-              style: context.text.bodySmall,
-            ),
-          ],
+                  const SizedBox(height: Space.md),
+                  Wrap(
+                    spacing: Space.xs + 2,
+                    runSpacing: Space.xs + 2,
+                    children: [
+                      for (final type in const [
+                        ComponentType.pcCase,
+                        ComponentType.motherboard,
+                        ComponentType.cpu,
+                        ComponentType.gpu,
+                        ComponentType.ram,
+                        ComponentType.psu,
+                        ComponentType.cooling,
+                      ])
+                        Semantics(
+                          label:
+                              '${type.label} ${state.selectedComponents[type] != null ? 'selected' : 'not selected'}',
+                          excludeSemantics: true,
+                          child: RigPill(
+                            label: type.shortLabel,
+                            icon: state.selectedComponents[type] != null
+                                ? Icons.check_circle
+                                : Icons.radio_button_unchecked,
+                            color: state.selectedComponents[type] != null
+                                ? type.tint
+                                : c.textSecondary,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: Space.md),
+                  Text(
+                    'Drag to rotate, pinch to zoom. This is a simplified preview of '
+                    'your build stage, not your exact parts.',
+                    style: context.text.bodySmall,
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

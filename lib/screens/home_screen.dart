@@ -7,8 +7,8 @@ import '../services/saved_builds_service.dart';
 import '../theme/app_tokens.dart';
 import '../utils/formatters.dart';
 import '../widgets/build_widgets.dart';
+import '../widgets/rig_art.dart';
 import '../widgets/rig_feedback.dart';
-import '../widgets/rig_performance.dart';
 import '../widgets/rig_surfaces.dart';
 import 'community_screen.dart';
 import 'compare_builds_screen.dart';
@@ -16,7 +16,7 @@ import 'compare_builds_screen.dart';
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  static const _recentLimit = 3;
+  static const _recentLimit = 4;
 
   void _openTab(WidgetRef ref, AppTab tab) =>
       ref.read(selectedTabProvider.notifier).select(tab);
@@ -33,53 +33,51 @@ class HomeScreen extends ConsumerWidget {
         bottom: false,
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(
-            Space.screen,
             Space.lg,
-            Space.screen,
-            Space.xxl,
+            Space.md,
+            Space.lg,
+            Space.xl,
           ),
           child: ContentWidth(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _Header(onProfile: () => _openTab(ref, AppTab.profile)),
-                const SizedBox(height: Space.xl),
-                _HeroCard(
-                  selectedCount: selectedCount,
-                  onStart: () => _openTab(ref, AppTab.build),
-                ),
                 const SizedBox(height: Space.lg),
-                buildsAsync.when(
-                  loading: () => const _StatsRow(),
-                  error: (_, _) => const SizedBox.shrink(),
-                  data: (builds) {
-                    final public = builds.where((b) => b.isPublic).length;
-                    return _StatsRow(
-                      total: builds.length,
-                      public: public,
-                      private: builds.length - public,
-                    );
-                  },
+                RigReveal(
+                  child: _HeroCard(
+                    selectedCount: selectedCount,
+                    onStart: () => _openTab(ref, AppTab.build),
+                  ),
                 ),
-                const SizedBox(height: Space.section),
-                const SectionHeader(title: 'Quick actions'),
-                _QuickActions(onBuild: () => _openTab(ref, AppTab.build)),
+                const SizedBox(height: Space.md),
+                RigReveal(
+                  order: 1,
+                  child: buildsAsync.when(
+                    loading: () => const _StatsRow(),
+                    error: (_, _) => const SizedBox.shrink(),
+                    data: (builds) {
+                      final public = builds.where((b) => b.isPublic).length;
+                      return _StatsRow(
+                        total: builds.length,
+                        public: public,
+                        private: builds.length - public,
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: Space.md),
+                const RigReveal(order: 2, child: _QuickActions()),
                 const SizedBox(height: Space.section),
                 SectionHeader(
-                  title: 'Recent builds',
+                  title: 'My last builds',
                   actionLabel: (buildsAsync.value?.length ?? 0) > _recentLimit
                       ? 'See all'
                       : null,
                   onAction: () => _openTab(ref, AppTab.saved),
                 ),
                 buildsAsync.when(
-                  loading: () => const Column(
-                    children: [
-                      Skeleton(height: 96, radius: Radii.lg),
-                      SizedBox(height: Space.md),
-                      Skeleton(height: 96, radius: Radii.lg),
-                    ],
-                  ),
+                  loading: () => const Skeleton(height: 190, radius: Radii.lg),
                   error: (error, _) => ErrorState(
                     error: error,
                     title: 'Could not load your builds',
@@ -87,16 +85,8 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   data: (builds) => builds.isEmpty
                       ? const _NoBuildsYet()
-                      : Column(
-                          children: [
-                            for (final build in builds.take(_recentLimit))
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: Space.md,
-                                ),
-                                child: _RecentBuildCard(savedBuild: build),
-                              ),
-                          ],
+                      : _RecentBuilds(
+                          builds: builds.take(_recentLimit).toList(),
                         ),
                 ),
               ],
@@ -121,7 +111,7 @@ class _Header extends ConsumerWidget {
 
     return Row(
       children: [
-        const RigMark(),
+        const RigMark(size: 44),
         const SizedBox(width: Space.md),
         Expanded(
           child: Column(
@@ -151,6 +141,7 @@ class _Header extends ConsumerWidget {
                   name.isEmpty ? (user?.email ?? '?') : name,
                 ),
                 imageUrl: user?.photoURL,
+                size: 44,
               ),
             ),
           ),
@@ -168,35 +159,58 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.rig;
+    // The tower sits beside the copy, and steps aside when text is enlarged.
+    final showArt =
+        MediaQuery.textScalerOf(context).scale(10) <= 12 &&
+        MediaQuery.sizeOf(context).width >= 360;
+
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        gradient: c.heroGradient,
+        color: RigPalette.volt,
         borderRadius: BorderRadius.circular(Radii.xl),
       ),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: CircuitPattern(color: c.onHero.withValues(alpha: 0.16)),
+          Positioned(
+            right: -60,
+            top: -50,
+            child: Container(
+              width: 230,
+              height: 230,
+              decoration: BoxDecoration(
+                color: RigPalette.sun.withValues(alpha: 0.75),
+                shape: BoxShape.circle,
+              ),
+            ),
           ),
+          if (showArt)
+            const Positioned(
+              right: Space.md,
+              top: Space.lg,
+              bottom: 92,
+              child: RigTowerArt(),
+            ),
           Padding(
-            padding: const EdgeInsets.all(Space.xxl),
+            padding: const EdgeInsets.all(Space.xl),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
                   'Build Your\nDream PC',
-                  style: context.text.displaySmall!.copyWith(color: c.onHero),
+                  style: context.text.displayMedium!.copyWith(
+                    color: RigPalette.ink,
+                    fontSize: 36,
+                  ),
                 ),
                 const SizedBox(height: Space.md),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 260),
+                Padding(
+                  padding: EdgeInsets.only(right: showArt ? 150 : 0),
                   child: Text(
                     'Pick real parts, check compatibility, and estimate '
                     'performance before you buy.',
                     style: context.text.bodyMedium!.copyWith(
-                      color: c.onHeroMuted,
+                      color: RigPalette.ink,
                     ),
                   ),
                 ),
@@ -204,8 +218,8 @@ class _HeroCard extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: onStart,
                   style: FilledButton.styleFrom(
-                    backgroundColor: c.onHero,
-                    foregroundColor: c.heroStart,
+                    backgroundColor: RigPalette.ink,
+                    foregroundColor: RigPalette.volt,
                   ),
                   icon: const Icon(Icons.arrow_forward),
                   label: Text(
@@ -232,7 +246,6 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.rig;
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -241,26 +254,23 @@ class _StatsRow extends StatelessWidget {
             child: _Stat(
               label: 'Saved',
               value: total,
-              icon: Icons.bookmark,
-              color: c.accent,
+              color: RigPalette.tangerine,
             ),
           ),
-          const SizedBox(width: Space.md),
+          const SizedBox(width: Space.sm + 2),
           Expanded(
             child: _Stat(
               label: 'Public',
               value: public,
-              icon: Icons.public,
-              color: c.success,
+              color: RigPalette.mint,
             ),
           ),
-          const SizedBox(width: Space.md),
+          const SizedBox(width: Space.sm + 2),
           Expanded(
             child: _Stat(
               label: 'Private',
               value: private,
-              icon: Icons.lock,
-              color: c.accentAlt,
+              color: RigPalette.lilac,
             ),
           ),
         ],
@@ -272,15 +282,9 @@ class _StatsRow extends StatelessWidget {
 class _Stat extends StatelessWidget {
   final String label;
   final int? value;
-  final IconData icon;
   final Color color;
 
-  const _Stat({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
+  const _Stat({required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -288,21 +292,23 @@ class _Stat extends StatelessWidget {
       label: value == null ? '$label builds loading' : '$value $label builds',
       excludeSemantics: true,
       child: RigCard(
+        color: color,
         padding: const EdgeInsets.all(Space.md + 2),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(height: Space.sm),
             value == null
-                ? const Skeleton(width: 28, height: 24)
-                : Text('$value', style: context.metric(24)),
-            const SizedBox(height: 2),
+                ? const Skeleton(width: 32, height: 36)
+                : Text(
+                    '$value',
+                    style: context.metric(36, color: RigPalette.ink),
+                  ),
+            const SizedBox(height: Space.xs),
             Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: context.text.bodySmall,
+              style: context.text.labelMedium!.copyWith(color: RigPalette.ink),
             ),
           ],
         ),
@@ -312,83 +318,112 @@ class _Stat extends StatelessWidget {
 }
 
 class _QuickActions extends StatelessWidget {
-  final VoidCallback onBuild;
-
-  const _QuickActions({required this.onBuild});
+  const _QuickActions();
 
   @override
   Widget build(BuildContext context) {
-    final c = context.rig;
     void push(Widget screen) =>
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
 
-    return Column(
-      children: [
-        _QuickAction(
-          icon: Icons.handyman,
-          color: c.accent,
-          title: 'Builder',
-          subtitle: 'Choose parts for your build',
-          onTap: onBuild,
-        ),
-        const SizedBox(height: Space.md),
-        _QuickAction(
-          icon: Icons.compare_arrows,
-          color: c.accentAlt,
-          title: 'Compare builds',
-          subtitle: 'Put up to three saved builds side by side',
-          onTap: () => push(const CompareBuildsScreen()),
-        ),
-        const SizedBox(height: Space.md),
-        _QuickAction(
-          icon: Icons.groups,
-          color: c.success,
-          title: 'Community builds',
-          subtitle: 'See what other builders shared',
-          onTap: () => push(const CommunityScreen()),
-        ),
-      ],
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _QuickAction(
+              icon: Icons.compare_arrows,
+              title: 'Compare builds',
+              subtitle: 'Up to three, side by side',
+              onTap: () => push(const CompareBuildsScreen()),
+            ),
+          ),
+          const SizedBox(width: Space.sm + 2),
+          Expanded(
+            child: _QuickAction(
+              icon: Icons.groups,
+              title: 'Community builds',
+              subtitle: 'See what others shared',
+              dark: true,
+              onTap: () => push(const CommunityScreen()),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _QuickAction extends StatelessWidget {
   final IconData icon;
-  final Color color;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final bool dark;
 
   const _QuickAction({
     required this.icon,
-    required this.color,
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.dark = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final content = Builder(
+      builder: (context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              RigIconBox(icon: icon, size: 44),
+              Icon(Icons.north_east, color: context.rig.textPrimary, size: 22),
+            ],
+          ),
+          const SizedBox(height: Space.xl),
+          Text(title, style: context.text.titleLarge),
+          const SizedBox(height: Space.xs),
+          Text(subtitle, style: context.text.bodySmall),
+        ],
+      ),
+    );
+
     return Semantics(
       button: true,
-      child: RigCard(
-        onTap: onTap,
-        padding: const EdgeInsets.all(Space.md + 2),
+      child: dark
+          ? RigInkCard(
+              padding: const EdgeInsets.all(Space.lg),
+              onTap: onTap,
+              child: content,
+            )
+          : RigCard(onTap: onTap, child: content),
+    );
+  }
+}
+
+class _RecentBuilds extends StatelessWidget {
+  final List<SavedBuild> builds;
+
+  const _RecentBuilds({required this.builds});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      clipBehavior: Clip.none,
+      child: IntrinsicHeight(
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            RigIconBox(icon: icon, color: color),
-            const SizedBox(width: Space.md + 2),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: context.text.titleSmall),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: context.text.bodySmall),
-                ],
+            for (final build in builds)
+              Padding(
+                padding: const EdgeInsets.only(right: Space.md),
+                child: SizedBox(
+                  width: 236,
+                  child: _RecentBuildCard(savedBuild: build),
+                ),
               ),
-            ),
-            Icon(Icons.chevron_right, color: context.rig.textSecondary),
           ],
         ),
       ),
@@ -406,38 +441,49 @@ class _RecentBuildCard extends ConsumerWidget {
     final result = performanceOf(savedBuild);
     return Semantics(
       button: true,
-      child: RigCard(
+      child: RigInkCard(
+        padding: const EdgeInsets.all(Space.lg + 2),
         onTap: () => openSavedBuild(context, ref, savedBuild),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    savedBuild.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.text.titleMedium,
+        child: Builder(
+          builder: (context) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                formatDate(savedBuild.createdAt),
+                style: context.text.bodySmall,
+              ),
+              const SizedBox(height: Space.xs),
+              Text(
+                savedBuild.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.text.headlineSmall,
+              ),
+              BuildHighlights(components: savedBuild.components),
+              const SizedBox(height: Space.lg),
+              const Spacer(),
+              PartStrip(components: savedBuild.components),
+              const SizedBox(height: Space.md),
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: Space.sm,
+                runSpacing: Space.xs,
+                children: [
+                  Text(
+                    formatMoney(savedBuild.totalPrice, decimals: 0),
+                    style: context.metric(24, color: context.rig.volt),
                   ),
-                ),
-                const SizedBox(width: Space.sm),
-                Text(
-                  formatMoney(savedBuild.totalPrice, decimals: 0),
-                  style: context.metric(16, color: context.rig.accent),
-                ),
-              ],
-            ),
-            BuildHighlights(components: savedBuild.components),
-            if (result != null) ...[
-              const SizedBox(height: Space.sm),
-              RigPill(
-                label: 'Est. score ${result.systemScore.toStringAsFixed(0)}',
-                icon: Icons.speed,
-                color: scoreColor(context, result.systemScore),
+                  if (result != null)
+                    RigPill(
+                      label:
+                          'Est. score ${result.systemScore.toStringAsFixed(0)}',
+                      color: context.rig.textPrimary,
+                    ),
+                ],
               ),
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -459,7 +505,7 @@ class _NoBuildsYet extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('No saved builds yet', style: context.text.titleSmall),
+                Text('No saved builds yet', style: context.text.titleMedium),
                 const SizedBox(height: 2),
                 Text(
                   'Builds you save will show up here.',

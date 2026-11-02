@@ -33,16 +33,17 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Profile')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(
-          Space.screen,
+          Space.lg,
           Space.sm,
-          Space.screen,
-          Space.xl,
+          Space.lg,
+          Space.lg,
         ),
         child: ContentWidth(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               RigCard(
+                color: RigPalette.volt,
                 padding: const EdgeInsets.all(Space.xl),
                 child: Row(
                   children: [
@@ -51,7 +52,7 @@ class ProfileScreen extends ConsumerWidget {
                         name.isEmpty ? (user.email ?? '?') : name,
                       ),
                       imageUrl: user.photoURL,
-                      size: 64,
+                      size: 76,
                     ),
                     const SizedBox(width: Space.lg),
                     Expanded(
@@ -60,12 +61,16 @@ class ProfileScreen extends ConsumerWidget {
                         children: [
                           Text(
                             name.isEmpty ? 'No name set' : name,
-                            style: context.text.titleLarge,
+                            style: context.text.headlineMedium!.copyWith(
+                              color: RigPalette.ink,
+                            ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: Space.xs),
                           Text(
                             user.email ?? 'No email',
-                            style: context.text.bodySmall,
+                            style: context.text.bodySmall!.copyWith(
+                              color: RigPalette.ink,
+                            ),
                           ),
                         ],
                       ),

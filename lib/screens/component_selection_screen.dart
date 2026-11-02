@@ -242,7 +242,6 @@ class _ComponentSelectionScreenState
                   ),
           ),
           const SizedBox(height: Space.sm),
-          Divider(color: context.rig.border),
           Expanded(child: _buildProductList()),
         ],
       ),
@@ -327,7 +326,7 @@ class _ChipRow extends StatelessWidget {
                   selected: selected == option,
                   onSelected: (_) => onSelect(option),
                   labelStyle: context.text.labelLarge!.copyWith(
-                    color: selected == option ? c.onAccent : c.textPrimary,
+                    color: selected == option ? c.onVolt : c.textPrimary,
                   ),
                 ),
               ),
@@ -360,29 +359,36 @@ class _ProductCard extends StatelessWidget {
     return Semantics(
       button: true,
       child: RigCard(
-        padding: const EdgeInsets.all(Space.md),
+        padding: const EdgeInsets.all(Space.sm + 2),
         onTap: onOpen,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(Radii.md),
-              child: ProductImage(
-                url: component.imageUrl,
-                fallbackIcon: component.type.icon,
-                size: 96,
+              child: SizedBox(
+                height: 176,
+                child: ProductImage(
+                  url: component.imageUrl,
+                  fallbackIcon: component.type.icon,
+                ),
               ),
             ),
-            const SizedBox(width: Space.md),
-            Expanded(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.sm,
+                Space.md,
+                Space.sm,
+                Space.xs,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     component.name,
-                    maxLines: 3,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: context.text.titleSmall,
+                    style: context.text.titleMedium,
                   ),
                   if (hasRating || hasReviews) ...[
                     const SizedBox(height: Space.xs),
@@ -391,7 +397,7 @@ class _ProductCard extends StatelessWidget {
                       spacing: Space.xs,
                       children: [
                         if (hasRating) ...[
-                          Icon(Icons.star, size: 14, color: c.warning),
+                          Icon(Icons.star, size: 15, color: c.accent),
                           Text('$rating', style: context.text.labelMedium),
                         ],
                         if (hasReviews)
@@ -409,7 +415,7 @@ class _ProductCard extends StatelessWidget {
                         child: Text(
                           formatPrice(component.price),
                           style: component.price > 0
-                              ? context.metric(18)
+                              ? context.metric(26)
                               : context.text.bodySmall,
                         ),
                       ),
@@ -417,11 +423,9 @@ class _ProductCard extends StatelessWidget {
                         onPressed: onAdd,
                         tooltip: 'Add ${component.name} to build',
                         style: IconButton.styleFrom(
-                          backgroundColor: c.accent,
-                          foregroundColor: c.onAccent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(Radii.md),
-                          ),
+                          backgroundColor: c.volt,
+                          foregroundColor: c.onVolt,
+                          minimumSize: const Size(52, 52),
                         ),
                         icon: const Icon(Icons.add),
                       ),

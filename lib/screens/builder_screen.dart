@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/component.dart';
@@ -8,6 +6,7 @@ import '../providers/build_provider.dart';
 import '../services/compatibility_service.dart';
 import '../theme/app_tokens.dart';
 import '../utils/formatters.dart';
+import '../widgets/build_widgets.dart';
 import '../widgets/compatibility_card.dart';
 import '../widgets/rig_feedback.dart';
 import '../widgets/rig_performance.dart';
@@ -66,10 +65,10 @@ class BuilderScreen extends ConsumerWidget {
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
-          Space.screen,
+          Space.lg,
           Space.sm,
-          Space.screen,
-          Space.xl,
+          Space.lg,
+          Space.lg,
         ),
         children: [
           ContentWidth(
@@ -79,19 +78,33 @@ class BuilderScreen extends ConsumerWidget {
                 _SummaryCard(state: buildState),
                 const SizedBox(height: Space.md),
                 CompatibilityCard(report: compatibility),
-                for (final type in _slots)
+                // Two columns of part blocks, which fill with colour as you pick.
+                for (var i = 0; i < _slots.length; i += 2)
                   Padding(
                     padding: const EdgeInsets.only(bottom: Space.sm + 2),
-                    child: _SlotCard(
-                      type: type,
-                      component: buildState.selectedComponents[type],
-                      onSelect: () => _push(
-                        context,
-                        ComponentSelectionScreen(componentType: type),
-                      ),
-                      onView: (component) => _push(
-                        context,
-                        ProductDetailScreen(component: component),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (final type in [_slots[i], _slots[i + 1]]) ...[
+                            if (type != _slots[i])
+                              const SizedBox(width: Space.sm + 2),
+                            Expanded(
+                              child: _SlotCard(
+                                type: type,
+                                component: buildState.selectedComponents[type],
+                                onSelect: () => _push(
+                                  context,
+                                  ComponentSelectionScreen(componentType: type),
+                                ),
+                                onView: (component) => _push(
+                                  context,
+                                  ProductDetailScreen(component: component),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ),
@@ -131,48 +144,49 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.rig;
     final count = state.selectedComponents.length;
     final total = BuilderScreen._slots.length;
-    return RigCard(
-      padding: const EdgeInsets.all(Space.xl),
-      child: Row(
-        children: [
-          RigGauge(
-            progress: count / total,
-            color: c.accent,
-            size: 76,
-            strokeWidth: 8,
-            sweep: math.pi * 2,
-            semanticLabel: '$count of $total parts selected',
-            child: Text('$count/$total', style: context.metric(16)),
-          ),
-          const SizedBox(width: Space.xl),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Estimated total', style: context.text.bodySmall),
-                const SizedBox(height: 2),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    formatMoney(state.totalPrice),
-                    style: context.metric(28),
-                  ),
+    return RigInkCard(
+      padding: const EdgeInsets.fromLTRB(
+        Space.xl,
+        Space.xl,
+        Space.xl,
+        Space.lg,
+      ),
+      child: Builder(
+        builder: (context) {
+          final c = context.rig;
+          return Column(
+            children: [
+              RigGauge(
+                progress: count / total,
+                color: c.volt,
+                segments: total,
+                semanticLabel: '$count of $total parts selected',
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('$count/$total', style: context.metric(20)),
+                    const SizedBox(height: Space.xs),
+                    Text(
+                      formatMoney(state.totalPrice),
+                      style: context.metric(34, color: c.volt),
+                    ),
+                    Text('Estimated total', style: context.text.bodySmall),
+                  ],
                 ),
-                const SizedBox(height: Space.xs),
-                Text(
-                  count == total
-                      ? 'All parts selected'
-                      : '${total - count} more to complete this build',
-                  style: context.text.bodySmall,
-                ),
-              ],
-            ),
-          ),
-        ],
+              ),
+              const SizedBox(height: Space.md),
+              Text(
+                count == total
+                    ? 'All parts selected'
+                    : '${total - count} more to complete this build',
+                textAlign: TextAlign.center,
+                style: context.text.titleSmall,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -196,6 +210,7 @@ class _SlotCard extends StatelessWidget {
     final c = context.rig;
     final part = component;
     final selected = part != null;
+    final foreground = selected ? RigPalette.ink : c.textPrimary;
 
     return Semantics(
       button: true,
@@ -203,53 +218,59 @@ class _SlotCard extends StatelessWidget {
           ? '${type.label}: ${part.name}. View details.'
           : 'Add ${type.label}',
       child: RigCard(
-        tone: selected ? RigCardTone.selected : RigCardTone.normal,
+        color: selected ? type.tint : null,
         padding: const EdgeInsets.fromLTRB(
-          Space.md,
-          Space.md,
+          Space.md + 2,
+          Space.sm + 2,
           Space.xs,
-          Space.md,
+          Space.md + 2,
         ),
         onTap: selected ? () => onView(part) : onSelect,
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            RigIconBox(
-              icon: type.icon,
-              color: selected ? c.accent : c.textSecondary,
+            Row(
+              children: [
+                if (selected)
+                  PartThumbnail(component: part, size: 44)
+                else
+                  PartTile(type: type, size: 44),
+                const Spacer(),
+                IconButton(
+                  icon: Icon(selected ? Icons.swap_horiz : Icons.add),
+                  color: foreground,
+                  tooltip: selected
+                      ? 'Change ${type.label}'
+                      : 'Add ${type.label}',
+                  onPressed: onSelect,
+                ),
+              ],
             ),
-            const SizedBox(width: Space.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(type.label, style: context.text.labelMedium),
-                  const SizedBox(height: 2),
-                  Text(
-                    selected ? part.name : 'Not selected',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: selected
-                        ? context.text.titleSmall
-                        : context.text.bodyMedium!.copyWith(
-                            color: c.textSecondary,
-                          ),
-                  ),
-                  if (selected) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      formatPrice(part.price),
-                      style: context.metric(13, color: c.accent),
-                    ),
-                  ],
-                ],
+            const SizedBox(height: Space.sm),
+            Text(
+              type.label,
+              style: context.text.labelMedium!.copyWith(
+                color: selected ? RigPalette.ink : c.textSecondary,
               ),
             ),
-            IconButton(
-              icon: Icon(selected ? Icons.swap_horiz : Icons.add_circle),
-              color: selected ? c.textSecondary : c.accent,
-              tooltip: selected ? 'Change ${type.label}' : 'Add ${type.label}',
-              onPressed: onSelect,
+            const SizedBox(height: 2),
+            Padding(
+              padding: const EdgeInsets.only(right: Space.sm),
+              child: Text(
+                selected ? part.name : 'Not selected',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: context.text.titleSmall!.copyWith(color: foreground),
+              ),
             ),
+            if (selected) ...[
+              const Spacer(),
+              const SizedBox(height: Space.sm),
+              Text(
+                formatPrice(part.price),
+                style: context.metric(16, color: RigPalette.ink),
+              ),
+            ],
           ],
         ),
       ),

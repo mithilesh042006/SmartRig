@@ -205,9 +205,13 @@ class _GalleryHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.rig;
     return SliverAppBar(
-      expandedHeight: 320,
+      expandedHeight: 340,
       pinned: true,
       backgroundColor: c.background,
+      clipBehavior: Clip.antiAlias,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(Radii.xl)),
+      ),
       leading: Padding(
         padding: const EdgeInsets.all(Space.xs + 2),
         child: IconButton.filledTonal(
@@ -253,26 +257,43 @@ class _ProductSummary extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (brand != null && brand!.isNotEmpty) ...[
-          Text(
-            brand!,
-            style: context.text.labelLarge!.copyWith(color: c.accent),
-          ),
-          const SizedBox(height: Space.xs),
+          RigPill(label: brand!, color: c.accent),
+          const SizedBox(height: Space.sm),
         ],
-        Text(title, style: context.text.titleLarge),
-        const SizedBox(height: Space.md),
+        Text(title, style: context.text.headlineSmall),
+        const SizedBox(height: Space.lg),
         Row(
           children: [
             Expanded(
               child: Text(
                 priceDisplay ?? formatPrice(price),
                 style: price > 0 || priceDisplay != null
-                    ? context.metric(28)
+                    ? context.metric(40)
                     : context.text.bodyMedium,
               ),
             ),
             if (rating != null)
-              RigPill(label: rating!, icon: Icons.star, color: c.warning),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Space.md,
+                  vertical: Space.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: RigPalette.sun,
+                  borderRadius: BorderRadius.circular(Radii.pill),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star, size: 16, color: RigPalette.ink),
+                    const SizedBox(width: Space.xs),
+                    Text(
+                      rating!,
+                      style: context.metric(14, color: RigPalette.ink),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
         if (reviewCount != null) ...[
@@ -332,7 +353,7 @@ class _DetailsBody extends StatelessWidget {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(Radii.md),
                         border: Border.all(
-                          color: selected ? c.accent : c.border,
+                          color: selected ? c.textPrimary : c.border,
                           width: selected ? 2 : 1,
                         ),
                       ),
@@ -361,7 +382,7 @@ class _DetailsBody extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.check_circle, size: 18, color: c.success),
+                  Icon(Icons.check_circle, size: 20, color: c.success),
                   const SizedBox(width: Space.sm + 2),
                   Expanded(
                     child: Text(feature, style: context.text.bodyMedium),

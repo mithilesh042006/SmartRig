@@ -30,12 +30,12 @@ class EmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              RigIconBox(icon: icon, size: 72),
+              RigIconBox(icon: icon, size: 88),
               const SizedBox(height: Space.xl),
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: context.text.titleLarge,
+                style: context.text.headlineSmall,
               ),
               const SizedBox(height: Space.sm),
               Text(

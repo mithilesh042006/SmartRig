@@ -5,11 +5,25 @@ import 'app_tokens.dart';
 
 class AppTheme {
   /// [googleFonts] is off in tests, which can't download the font.
-  static ThemeData light({bool googleFonts = true}) =>
-      _build(RigColors.light, Brightness.light, googleFonts);
+  static ThemeData light({bool googleFonts = true}) {
+    _googleFonts = googleFonts;
+    return _build(RigColors.light, Brightness.light, googleFonts);
+  }
 
-  static ThemeData dark({bool googleFonts = true}) =>
-      _build(RigColors.dark, Brightness.dark, googleFonts);
+  static ThemeData dark({bool googleFonts = true}) {
+    _googleFonts = googleFonts;
+    return _build(RigColors.dark, Brightness.dark, googleFonts);
+  }
+
+  static bool _googleFonts = true;
+  static final _inkThemes = <bool, ThemeData>{};
+
+  /// The dark theme, for panels that stay ink-coloured in either theme.
+  static ThemeData get ink => _inkThemes[_googleFonts] ??= _build(
+    RigColors.dark,
+    Brightness.dark,
+    _googleFonts,
+  );
 
   static TextTheme _textTheme(RigColors c, bool googleFonts) {
     TextStyle style(
@@ -27,22 +41,33 @@ class AppTheme {
     );
 
     final theme = TextTheme(
-      displaySmall: style(32, FontWeight.w800, spacing: -1, height: 1.12),
-      headlineMedium: style(28, FontWeight.w800, spacing: -0.8, height: 1.15),
-      headlineSmall: style(24, FontWeight.w700, spacing: -0.5, height: 1.2),
-      titleLarge: style(20, FontWeight.w700, spacing: -0.3, height: 1.25),
-      titleMedium: style(16, FontWeight.w600, spacing: -0.1),
-      titleSmall: style(14, FontWeight.w600),
+      displayLarge: style(52, FontWeight.w700, spacing: -2, height: 1),
+      displayMedium: style(42, FontWeight.w700, spacing: -1.6, height: 1.02),
+      displaySmall: style(34, FontWeight.w700, spacing: -1.2, height: 1.06),
+      headlineMedium: style(30, FontWeight.w700, spacing: -1, height: 1.1),
+      headlineSmall: style(26, FontWeight.w700, spacing: -0.8, height: 1.14),
+      titleLarge: style(21, FontWeight.w700, spacing: -0.5, height: 1.2),
+      titleMedium: style(17, FontWeight.w700, spacing: -0.3, height: 1.25),
+      titleSmall: style(15, FontWeight.w600, spacing: -0.1, height: 1.3),
       bodyLarge: style(16, FontWeight.w400, height: 1.5),
       bodyMedium: style(14, FontWeight.w400, height: 1.45),
-      bodySmall: style(12.5, FontWeight.w400, color: c.textSecondary),
-      labelLarge: style(14, FontWeight.w600),
+      bodySmall: style(12.5, FontWeight.w500, color: c.textSecondary),
+      labelLarge: style(14, FontWeight.w700),
       labelMedium: style(12.5, FontWeight.w600, color: c.textSecondary),
       labelSmall: style(11, FontWeight.w600, color: c.textSecondary),
     );
-    return googleFonts
-        ? GoogleFonts.interTextTheme(theme)
-        : theme.apply(fontFamily: 'Roboto');
+    if (!googleFonts) return theme.apply(fontFamily: 'Roboto');
+
+    // A characterful grotesque for headings and figures, Inter for reading.
+    final display = GoogleFonts.spaceGroteskTextTheme(theme);
+    final body = GoogleFonts.interTextTheme(theme);
+    return display.copyWith(
+      bodyLarge: body.bodyLarge,
+      bodyMedium: body.bodyMedium,
+      bodySmall: body.bodySmall,
+      labelMedium: body.labelMedium,
+      labelSmall: body.labelSmall,
+    );
   }
 
   static ThemeData _build(
@@ -51,22 +76,20 @@ class AppTheme {
     bool googleFonts,
   ) {
     final text = _textTheme(c, googleFonts);
-    final buttonShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(Radii.md),
-    );
-    const buttonSize = Size(64, 52);
+    const buttonShape = StadiumBorder();
+    const buttonSize = Size(64, 56);
     const buttonPadding = EdgeInsets.symmetric(horizontal: Space.xl);
-    final buttonText = text.labelLarge!.copyWith(fontSize: 15);
+    final buttonText = text.labelLarge!.copyWith(fontSize: 15.5);
 
     OutlineInputBorder inputBorder(Color color, [double width = 1]) =>
         OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Radii.md),
+          borderRadius: BorderRadius.circular(Radii.lg),
           borderSide: BorderSide(color: color, width: width),
         );
 
     final filledStyle = FilledButton.styleFrom(
-      backgroundColor: c.accent,
-      foregroundColor: c.onAccent,
+      backgroundColor: c.volt,
+      foregroundColor: c.onVolt,
       disabledBackgroundColor: c.surfaceRaised,
       disabledForegroundColor: c.textSecondary,
       minimumSize: buttonSize,
@@ -80,8 +103,8 @@ class AppTheme {
       brightness: brightness,
       colorScheme: ColorScheme(
         brightness: brightness,
-        primary: c.accent,
-        onPrimary: c.onAccent,
+        primary: c.volt,
+        onPrimary: c.onVolt,
         secondary: c.accentAlt,
         onSecondary: c.onAccent,
         error: c.error,
@@ -105,8 +128,17 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleSpacing: Space.screen,
-        titleTextStyle: text.titleLarge,
+        titleSpacing: Space.lg,
+        titleTextStyle: text.headlineSmall,
+      ),
+      // A round back button, in every screen's app bar.
+      actionIconTheme: ActionIconThemeData(
+        backButtonIconBuilder: (context) => Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(color: c.surface, shape: BoxShape.circle),
+          child: Icon(Icons.arrow_back, color: c.textPrimary, size: 20),
+        ),
       ),
       cardTheme: CardThemeData(
         color: c.surface,
@@ -115,7 +147,6 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(Radii.lg),
-          side: BorderSide(color: c.border),
         ),
       ),
       dividerTheme: DividerThemeData(color: c.border, space: 1, thickness: 1),
@@ -124,8 +155,8 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
-          backgroundColor: c.accent,
-          foregroundColor: c.onAccent,
+          backgroundColor: c.volt,
+          foregroundColor: c.onVolt,
           disabledBackgroundColor: c.surfaceRaised,
           disabledForegroundColor: c.textSecondary,
           minimumSize: buttonSize,
@@ -140,7 +171,10 @@ class AppTheme {
           minimumSize: buttonSize,
           padding: buttonPadding,
           shape: buttonShape,
-          side: BorderSide(color: c.border),
+          side: BorderSide(
+            color: c.textPrimary.withValues(alpha: 0.28),
+            width: 1.5,
+          ),
           textStyle: buttonText,
         ),
       ),
@@ -166,59 +200,68 @@ class AppTheme {
         prefixIconColor: c.textSecondary,
         suffixIconColor: c.textSecondary,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: Space.lg,
-          vertical: Space.lg,
+          horizontal: Space.xl,
+          vertical: Space.lg + 2,
         ),
         border: inputBorder(c.border),
-        enabledBorder: inputBorder(c.border),
-        focusedBorder: inputBorder(c.accent, 1.6),
+        enabledBorder: inputBorder(Colors.transparent),
+        focusedBorder: inputBorder(c.textPrimary, 2),
         errorBorder: inputBorder(c.error),
         focusedErrorBorder: inputBorder(c.error, 1.6),
         errorStyle: text.bodySmall!.copyWith(color: c.error),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: c.surface,
-        selectedColor: c.accent,
+        selectedColor: c.volt,
         disabledColor: c.surfaceRaised,
-        side: BorderSide(color: c.border),
+        side: BorderSide.none,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(Radii.pill),
         ),
         labelStyle: text.labelLarge!.copyWith(color: c.textPrimary),
-        secondaryLabelStyle: text.labelLarge!.copyWith(color: c.onAccent),
+        secondaryLabelStyle: text.labelLarge!.copyWith(color: c.onVolt),
         padding: const EdgeInsets.symmetric(
           horizontal: Space.sm,
-          vertical: Space.xs,
+          vertical: Space.xs + 2,
         ),
         showCheckmark: false,
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
-          minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
-          side: WidgetStatePropertyAll(BorderSide(color: c.border)),
-          textStyle: WidgetStatePropertyAll(text.labelMedium),
+          minimumSize: const WidgetStatePropertyAll(Size(48, 52)),
+          side: const WidgetStatePropertyAll(BorderSide.none),
+          textStyle: WidgetStatePropertyAll(text.labelLarge),
           foregroundColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.selected)
-                ? c.onAccent
+                ? c.onVolt
                 : c.textPrimary,
           ),
           backgroundColor: WidgetStateProperty.resolveWith(
             (states) =>
-                states.contains(WidgetState.selected) ? c.accent : c.surface,
+                states.contains(WidgetState.selected) ? c.volt : c.surface,
           ),
-          shape: WidgetStatePropertyAll(buttonShape),
+          shape: const WidgetStatePropertyAll(StadiumBorder()),
         ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        shape: const CircleBorder(),
+        side: BorderSide(color: c.textSecondary, width: 1.5),
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? c.volt
+              : Colors.transparent,
+        ),
+        checkColor: WidgetStatePropertyAll(c.onVolt),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? c.onAccent
+              ? c.onVolt
               : c.textSecondary,
         ),
         trackColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? c.accent
-              : c.surfaceRaised,
+          (states) =>
+              states.contains(WidgetState.selected) ? c.volt : c.surfaceRaised,
         ),
         trackOutlineColor: WidgetStatePropertyAll(c.border),
       ),
@@ -249,6 +292,7 @@ class AppTheme {
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: c.accent,
+        strokeCap: StrokeCap.round,
         circularTrackColor: c.surfaceRaised,
         linearTrackColor: c.surfaceRaised,
       ),

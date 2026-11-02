@@ -64,9 +64,18 @@ void main() {
 
       test('$name buttons and hero text are readable', () {
         expect(_contrast(c.onAccent, c.accent), greaterThanOrEqualTo(4.5));
-        for (final hero in [c.heroStart, c.heroEnd]) {
-          expect(_contrast(c.onHero, hero), greaterThanOrEqualTo(4.5));
-          expect(_contrast(c.onHeroMuted, hero), greaterThanOrEqualTo(4.5));
+        expect(_contrast(c.onVolt, c.volt), greaterThanOrEqualTo(4.5));
+        for (final block in [
+          RigPalette.volt,
+          RigPalette.tangerine,
+          RigPalette.sun,
+          RigPalette.mint,
+          RigPalette.sky,
+          RigPalette.lilac,
+          RigPalette.blush,
+          RigPalette.ice,
+        ]) {
+          expect(_contrast(RigPalette.ink, block), greaterThanOrEqualTo(4.5));
         }
       });
     }
